@@ -9,8 +9,32 @@ const CONFIG = {
         RISK_RESULT: 'ST_RISK_RESULT',
         GET_RISK: 'ST_GET_RISK',
     },
-    RISK_LEVELS: { Safe: 'low', Suspicious: 'medium', Dangerous: 'high' }
+    RISK_LEVELS: { Safe: 'low', Suspicious: 'medium', Dangerous: 'high' },
+    MAX_REQUESTS_LOGGED: 50
 };
+
+// ── Network Monitor ─────────────────────────────────────────────────
+chrome.webRequest.onBeforeRequest.addListener(
+    (details) => {
+        if (details.tabId <= 0) return;
+
+        const request = {
+            id: details.requestId,
+            url: details.url,
+            method: details.method,
+            type: details.type,
+            timestamp: Date.now()
+        };
+
+        chrome.storage.session.get(`reqs_${details.tabId}`).then(data => {
+            const reqs = data[`reqs_${details.tabId}`] || [];
+            reqs.unshift(request);
+            if (reqs.length > CONFIG.MAX_REQUESTS_LOGGED) reqs.pop();
+            chrome.storage.session.set({ [`reqs_${details.tabId}`]: reqs });
+        });
+    },
+    { urls: ["<all_urls>"] }
+);
 
 // ── Message Listener ────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -26,8 +50,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         fetch(CONFIG.API_ENDPOINT, { method: 'HEAD' }).catch(() => { });
         return false;
     } else if (message.type === CONFIG.MSG_TYPE.GET_RISK) {
-        chrome.storage.session.get(`tab_${message.tabId}`).then(data => {
-            sendResponse(data[`tab_${message.tabId}`] || null);
+        chrome.storage.session.get([`tab_${message.tabId}`, `reqs_${message.tabId}`]).then(data => {
+            const riskData = data[`tab_${message.tabId}`] || null;
+            const reqs = data[`reqs_${message.tabId}`] || [];
+            sendResponse({ ...riskData, requests: reqs });
         });
         return true; // Keep channel open for async response
     }
@@ -39,7 +65,11 @@ async function handleSignalReport(tabId, payload) {
     console.log(`[ShadowTrace] Received signal from tab ${tabId}: ${payload.domain.hostname}`);
 
     // Immediate clear to avoid stale data
-    await chrome.storage.session.remove(`tab_${tabId}`);
+    await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);
+
+    // Enhance payload with captured requests
+    const sessionData = await chrome.storage.session.get(`reqs_${tabId}`);
+    payload.network_requests = sessionData[`reqs_${tabId}`] || [];
 
     let risk;
     try {
@@ -132,7 +162,7 @@ function updateBadge(tabId, level) {
 // ── Lifecycle ───────────────────────────────────────────────────────
 chrome.tabs.onRemoved.addListener(id => {
     try {
-        chrome.storage.session.remove(`tab_${id}`);
+        chrome.storage.session.remove([`tab_${id}`, `reqs_${id}`]);
     } catch (e) { }
 });
 
@@ -140,6 +170,7 @@ chrome.tabs.onUpdated.addListener((id, change) => {
     if (change.status === 'loading') {
         try {
             chrome.action.setBadgeText({ tabId: id, text: '' });
+            chrome.storage.session.remove(`reqs_${id}`); // Clear on new page load
         } catch (e) { }
     }
 });
