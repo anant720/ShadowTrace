@@ -124,7 +124,7 @@ export default function OverviewPage() {
         </p>
         <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
           <button
-            onClick={() => router.push('/analytics')}
+            onClick={() => router.push('/audit')}
             style={{ background: 'var(--primary)', color: 'white', padding: '16px 36px', borderRadius: '20px', fontSize: '15px', boxShadow: '0 10px 20px rgba(0, 184, 148, 0.3)', cursor: 'pointer', border: 'none', fontWeight: '700' }}
           >
             Audit Logs
