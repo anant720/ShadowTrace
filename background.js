@@ -1,5 +1,5 @@
 const CONFIG = {
-    API_ENDPOINT: 'http://localhost:8000/analyze',
+    API_ENDPOINT: 'https://showtrace.onrender.com/analyze',
     API_KEY: 'st_api_kG9vX2mN8pL4wR5tZ1yQ7jS4nB0hF3d_',
     API_TIMEOUT_MS: 5000,
     API_RETRY_LIMIT: 2,

@@ -2,7 +2,7 @@
 
 const ST_CONFIG = Object.freeze({
   // Backend API
-  API_ENDPOINT: 'http://localhost:8000/analyze',
+  API_ENDPOINT: 'https://showtrace.onrender.com/analyze',
   API_TIMEOUT_MS: 5000,
   API_RETRY_LIMIT: 2,
 
