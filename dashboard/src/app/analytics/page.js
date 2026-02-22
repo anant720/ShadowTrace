@@ -52,34 +52,38 @@ export default function AnalyticsPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '48px' }}>
-                <div className="st-card" style={{ padding: '40px', height: '450px' }}>
+                <div className="st-card" style={{ padding: '40px', height: '450px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <h3 style={{ marginBottom: '40px', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Risk Evolution</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trends}>
-                            <defs>
-                                <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
-                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} domain={[0, 100]} />
-                            <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
-                            <Area type="monotone" dataKey="avg_risk" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorRisk)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    <div style={{ flex: 1, width: '100%', marginLeft: '-20px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trends} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} domain={[0, 100]} />
+                                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
+                                <Area type="monotone" dataKey="avg_risk" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorRisk)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
-                <div className="st-card" style={{ padding: '40px', height: '450px' }}>
+                <div className="st-card" style={{ padding: '40px', height: '450px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <h3 style={{ marginBottom: '40px', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Threat Concentration</h3>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={tlds} layout="vertical">
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} />
-                            <YAxis dataKey="tld" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '700' }} width={60} />
-                            <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
-                            <Bar dataKey="suspicious_scans" fill="var(--primary)" radius={[0, 12, 12, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div style={{ flex: 1, width: '100%', marginLeft: '-20px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={tlds} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} />
+                                <YAxis dataKey="tld" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '700' }} width={60} />
+                                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
+                                <Bar dataKey="suspicious_scans" fill="var(--primary)" radius={[0, 12, 12, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
