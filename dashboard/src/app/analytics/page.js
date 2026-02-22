@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
                         { id: 'L3', name: 'Semantic NLP', desc: 'Intent & Phishing Content', color: '#6366f1' },
                         { id: 'L4', name: 'Anomaly Detection', desc: 'Global Traffic Patterns', color: '#ec4899' }
                     ].map((layer) => {
-                        const score = recentScans[0]?.engine_scores?.[layer.id] || (75 + Math.random() * 20);
+                        const score = recentScans[0]?.engine_scores?.[layer.id] || 85;
                         return (
                             <div key={layer.id} style={{ background: 'var(--bg-main)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.03)', position: 'relative' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
