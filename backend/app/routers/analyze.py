@@ -19,7 +19,6 @@ router = APIRouter(tags=["Analysis"])
 async def analyze_page(
     request: AnalyzeRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    _api_key: str = Depends(verify_api_key),
 ) -> AnalyzeResponse:
     logger.info(f"Analyzing domain: {request.domain.hostname}")
     return await risk_scorer.evaluate(request, db)
