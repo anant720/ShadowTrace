@@ -66,6 +66,14 @@ class TrapSignals(BaseModel):
     offscreenElementCount: int = 0
 
 
+class NetworkRequest(BaseModel):
+    id: str
+    url: str
+    method: str
+    type: str
+    timestamp: int
+
+
 class MetaInfo(BaseModel):
     extensionVersion: Optional[str] = None
     userAgent: Optional[str] = Field(default=None, max_length=512)
@@ -80,6 +88,7 @@ class AnalyzeRequest(BaseModel):
     ml_behavior: Optional[MLBehaviorSignals] = Field(default_factory=MLBehaviorSignals)
     interaction: Optional[InteractionSignals] = Field(default_factory=InteractionSignals)
     traps: Optional[TrapSignals] = Field(default_factory=TrapSignals)
+    network_requests: Optional[List[NetworkRequest]] = Field(default_factory=list)
     meta: Optional[MetaInfo] = None
 
     class Config:

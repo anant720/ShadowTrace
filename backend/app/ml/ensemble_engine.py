@@ -73,6 +73,9 @@ class EnsembleScorer:
         if f.get("large_hex_count", 0) > 0: score += 40
         if f.get("form_traps", 0) > 0: score += 50
         if f.get("suspicious_handlers", 0) > 2: score += 40
+        
+        # Network Behavioral Signals
+        if f.get("post_ratio", 0) > 0.3: score += 30 
         return min(score, 100)
 
     def _predict_l3(self, f: Dict[str, float]) -> float:
@@ -85,7 +88,10 @@ class EnsembleScorer:
 
     def _predict_l4(self, f: Dict[str, float]) -> float:
         """Lightweight Anomaly Prediction logic."""
-        return 10.0 # Baseline
+        score = 10.0 # Baseline
+        if f.get("external_request_ratio", 0) > 0.6: score += 50
+        if f.get("network_request_count", 0) > 30: score += 20
+        return min(score, 100)
 
     def _generate_ml_reasoning(self, scores: Dict[str, float], features: Dict[str, float]) -> List[str]:
         reasons = []
@@ -95,7 +101,9 @@ class EnsembleScorer:
             reasons.append("L2 Behavioral Engine identified high-risk scripting patterns (Eval/Trap hooks detected)")
         if scores["L3"] > 50:
             reasons.append("L3 Semantic Engine flagged phishing-intent content structure")
+        if scores["L4"] > 50:
+            reasons.append(f"L4 Anomaly Engine detected unusual external traffic ({features.get('external_request_ratio', 0)*100:.1f}%)")
         
         if not reasons:
-            reasons.append("No critical ML triggers identified")
+            reasons.append("ML Consensus: Low risk structural indicators")
         return reasons

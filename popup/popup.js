@@ -20,6 +20,7 @@
         sigSource: $('sigSource'),
         statusDot: $('statusDot'),
         statusText: $('statusText'),
+        networkList: $('networkList'),
     };
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -49,13 +50,26 @@
                 if (!data) {
                     // Send a warm-up ping to backend via background to minimize cold-start
                     chrome.runtime.sendMessage({ type: 'ST_WARM_UP' });
-                    return;
+                } else {
+                    renderRiskData(data);
                 }
 
-                // If result is ready, render it instantly
-                renderRiskData(data);
+                // Start polling network requests separately for real-time feel
+                startNetworkPoller(tab.id);
             }
         );
+    }
+
+    function startNetworkPoller(tabId) {
+        const poll = () => {
+            chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: tabId }, (data) => {
+                if (data && data.requests) {
+                    renderNetworkRequests(data.requests);
+                }
+            });
+        };
+        poll();
+        setInterval(poll, 1500);
     }
 
     function renderRiskData(data) {
@@ -126,6 +140,29 @@
             els.statusDot.className = 'st-status-dot offline';
             els.statusText.textContent = 'Local analysis (API offline)';
         }
+
+        if (data.requests) renderNetworkRequests(data.requests);
+    }
+
+    function renderNetworkRequests(requests) {
+        if (!els.networkList) return;
+
+        if (!requests || requests.length === 0) {
+            els.networkList.innerHTML = '<div class="st-network-empty">Monitoring active tab traffic...</div>';
+            return;
+        }
+
+        const html = requests.map(req => {
+            const shortUrl = req.url.split('?')[0];
+            return `
+                <div class="st-network-item">
+                    <span class="st-method ${req.method}">${req.method}</span>
+                    <span class="st-url" title="${req.url}">${shortUrl}</span>
+                </div>
+            `;
+        }).join('');
+
+        els.networkList.innerHTML = html;
     }
 
     // ── Scanning State ──────────────────────────────────────────────

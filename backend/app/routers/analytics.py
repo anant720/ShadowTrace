@@ -124,21 +124,21 @@ async def get_recent_scans(limit: int = 10, db: AsyncIOMotorDatabase = Depends(g
 @router.get("/engine-breakdown")
 async def get_engine_breakdown(db: AsyncIOMotorDatabase = Depends(get_database), _user: dict = Depends(require_analyst)):
     pipeline = [
-        {"$match": {"engine_scores": {"$exists": True}}},
+        {"$match": {"layer_scores": {"$exists": True}}},
         {"$group": {
             "_id": None,
-            "sim": {"$avg": "$engine_scores.domain_similarity.score"},
-            "beh": {"$avg": "$engine_scores.behavioral.score"},
-            "ssl": {"$avg": "$engine_scores.ssl_protocol.score"},
-            "int": {"$avg": "$engine_scores.threat_intel.score"},
+            "l1": {"$avg": "$layer_scores.L1"},
+            "l2": {"$avg": "$layer_scores.L2"},
+            "l3": {"$avg": "$layer_scores.L3"},
+            "l4": {"$avg": "$layer_scores.L4"},
         }}
     ]
     res = None
     async for doc in db.scan_logs.aggregate(pipeline): res = doc
     if not res: return {"engines": {}}
     return {"engines": {
-        "similarity": {"avg_score": round(res["sim"] or 0, 1), "max_score": 30, "weight": "30%"},
-        "behavioral": {"avg_score": round(res["beh"] or 0, 1), "max_score": 30, "weight": "30%"},
-        "ssl": {"avg_score": round(res["ssl"] or 0, 1), "max_score": 10, "weight": "10%"},
-        "intel": {"avg_score": round(res["int"] or 0, 1), "max_score": 30, "weight": "30%"}
+        "L1": {"avg_score": round(res["l1"] or 0, 1), "max_score": 100, "weight": "20%"},
+        "L2": {"avg_score": round(res["l2"] or 0, 1), "max_score": 100, "weight": "30%"},
+        "L3": {"avg_score": round(res["l3"] or 0, 1), "max_score": 100, "weight": "40%"},
+        "L4": {"avg_score": round(res["l4"] or 0, 1), "max_score": 100, "weight": "10%"}
     }}

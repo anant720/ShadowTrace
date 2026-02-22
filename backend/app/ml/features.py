@@ -11,11 +11,11 @@ class FeatureEngineer:
 
     @staticmethod
     def extract_all(payload: Dict[str, Any]) -> Dict[str, float]:
-        signals = payload.get("signals", {})
-        domain_sigs = signals.get("domain", {})
-        ml_behavior = signals.get("ml_behavior", {})
-        interaction = signals.get("interaction", {})
-        traps = signals.get("traps", {})
+        domain_sigs = payload.get("domain", {})
+        ml_behavior = payload.get("ml_behavior", {})
+        interaction = payload.get("interaction", {})
+        traps = payload.get("traps", {})
+        network_reqs = payload.get("network_requests", [])
         
         full_url = payload.get("full_url", "")
         
@@ -31,6 +31,22 @@ class FeatureEngineer:
         features["form_traps"] = float(traps.get("hiddenFormCount", 0) + traps.get("offscreenElementCount", 0))
         features["has_keylogger"] = 1.0 if interaction.get("hasGlobalKeylogger") else 0.0
         
+        # --- Network-Level features (New) ---
+        req_count = len(network_reqs)
+        features["network_request_count"] = float(req_count)
+        
+        if req_count > 0:
+            posts = [r for r in network_reqs if r.get("method") == "POST"]
+            features["post_ratio"] = len(posts) / req_count
+            
+            # Identify requests to domains other than the landing domain
+            landing_host = urlparse(full_url).netloc
+            external = [r for r in network_reqs if urlparse(r.get("url", "")).netloc != landing_host]
+            features["external_request_ratio"] = len(external) / req_count
+        else:
+            features["post_ratio"] = 0.0
+            features["external_request_ratio"] = 0.0
+            
         return features
 
     @staticmethod
