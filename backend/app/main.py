@@ -311,7 +311,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
-from app.middleware.auth import OAuthMiddleware
 app.add_middleware(OAuthMiddleware)
 
 # Routers
