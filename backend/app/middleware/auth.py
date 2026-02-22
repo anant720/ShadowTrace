@@ -49,6 +49,7 @@ class OAuthMiddleware(BaseHTTPMiddleware):
         try:
             # Verify the ID token using Google's public keys
             # Note: We need the GOOGLE_CLIENT_ID in settings
+            idinfo = id_token.verify_oauth2_token(
                 token, 
                 requests.Request(), 
                 audience=settings.GOOGLE_CLIENT_ID
