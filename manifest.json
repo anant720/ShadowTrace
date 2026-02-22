@@ -6,7 +6,8 @@
     "permissions": [
         "activeTab",
         "storage",
-        "scripting"
+        "scripting",
+        "identity"
     ],
     "host_permissions": [
         "<all_urls>"
@@ -50,5 +51,13 @@
                 "<all_urls>"
             ]
         }
-    ]
+    ],
+    "oauth2": {
+        "client_id": "REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com",
+        "scopes": [
+            "openid",
+            "email",
+            "profile"
+        ]
+    }
 }

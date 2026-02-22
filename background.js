@@ -38,14 +38,46 @@ async function handleSignalReport(tabId, payload) {
     updateBadge(tabId, risk.risk_level);
 }
 
+async function getAuthToken() {
+    return new Promise((resolve, reject) => {
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+            if (chrome.runtime.lastError) {
+                console.warn('Google Identity error:', chrome.runtime.lastError);
+                resolve(null);
+            } else {
+                resolve(token);
+            }
+        });
+    });
+}
+
 async function sendToBackend(payload, retry = 0) {
     try {
+        const token = await getAuthToken();
+        const headers = { 'Content-Type': 'application/json' };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else {
+            // Fallback for when identity is not configured yet
+            headers['X-API-Key'] = CONFIG.API_KEY;
+        }
+
         const res = await fetch(CONFIG.API_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': CONFIG.API_KEY },
+            headers: headers,
             body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error();
+
+        if (!res.ok) {
+            if (res.status === 401 && token) {
+                // Token might be expired, clear it and retry once
+                chrome.identity.removeCachedAuthToken({ token }, () => { });
+                if (retry < CONFIG.API_RETRY_LIMIT) return sendToBackend(payload, retry + 1);
+            }
+            throw new Error(`API Error: ${res.status}`);
+        }
+
         const data = await res.json();
         const levelMap = { 'Safe': 'low', 'Suspicious': 'medium', 'Dangerous': 'high' };
         return {

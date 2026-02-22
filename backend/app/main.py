@@ -311,7 +311,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RateLimitMiddleware)
-app.add_middleware(APIKeyMiddleware)
+from app.middleware.auth import OAuthMiddleware
+app.add_middleware(OAuthMiddleware)
 
 # Routers
 app.include_router(analyze.router)
