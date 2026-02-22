@@ -92,10 +92,18 @@
     <!-- Network Monitor -->
     <div class="st-network-section">
       <div class="st-network-header">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
-        </svg>
-        <span>Real-time Network Insights</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
+          </svg>
+          <span>Real-time Network Insights</span>
+        </div>
+        <button id="openMonitor" class="st-icon-btn" title="Open Forensic Monitor">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+          </svg>
+        </button>
       </div>
       <div class="st-network-list" id="networkList">
         <div class="st-network-empty">Monitoring active tab traffic...</div>
