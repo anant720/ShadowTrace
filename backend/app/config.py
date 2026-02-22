@@ -22,25 +22,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        # Default local origins for development
-        defaults = ["http://localhost:3000", "http://127.0.0.1:3000", "chrome-extension://*"]
-        
-        if not self.CORS_ORIGINS:
-            return defaults
-            
-        try:
-            # Try to parse as JSON array
-            origins = json.loads(self.CORS_ORIGINS)
-            if isinstance(origins, list):
-                # Merge with defaults and remove duplicates
-                return list(set(origins + defaults))
-        except:
-            # Fallback to comma-separated string
-            origins = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
-            if origins:
-                return list(set(origins + defaults))
-        
-        return defaults
+        return ["*"]
 
     class Config:
         env_file = ".env"
