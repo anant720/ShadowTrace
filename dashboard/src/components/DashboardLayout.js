@@ -165,31 +165,6 @@ export default function DashboardLayout({ children }) {
                     <main style={{ flex: 1, padding: '40px' }}>
                         {children}
                     </main>
-
-                    {/* Assistant Panel (Right Sidebar) */}
-                    <aside style={{
-                        width: '320px',
-                        padding: '40px 32px 40px 0',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '24px'
-                    }}>
-                        <div className="st-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                                <h3 style={{ fontSize: '16px' }}>Assistant</h3>
-                                <button style={{ background: 'var(--bg-hover)', width: '24px', height: '24px', borderRadius: '6px', fontSize: '12px' }}>✕</button>
-                            </div>
-                            <div style={{ flex: 1, background: 'var(--bg-hover)', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
-                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                                    System scanning... No immediate threats detected in your current session.
-                                </p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input style={{ flex: 1, fontSize: '13px', padding: '10px 16px' }} placeholder="Ask anything..." />
-                                <button style={{ background: 'var(--primary)', color: 'white', width: '38px', borderRadius: '12px' }}>→</button>
-                            </div>
-                        </div>
-                    </aside>
                 </div>
             </div>
         </div>
