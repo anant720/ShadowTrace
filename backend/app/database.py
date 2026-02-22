@@ -1,4 +1,5 @@
 import logging
+import certifi
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import settings
 
@@ -14,6 +15,7 @@ async def connect_db():
         maxPoolSize=10,
         minPoolSize=2,
         serverSelectionTimeoutMS=5000,
+        tlsCAFile=certifi.where()
     )
     _db = _client[settings.MONGO_DB_NAME]
     try:
