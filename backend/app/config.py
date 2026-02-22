@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "shadowtrace-admin"
     RATE_LIMIT_RPM: int = 60
     LOG_LEVEL: str = "INFO"
-    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_ID: str = "661283807918-7m7u6942b6q91u80lvvshmgp1emnacfu.apps.googleusercontent.com"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     ANOMALY_INTERVAL_MINUTES: int = 15
