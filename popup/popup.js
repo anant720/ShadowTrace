@@ -21,6 +21,7 @@
         statusDot: $('statusDot'),
         statusText: $('statusText'),
         networkList: $('networkList'),
+        openMonitor: $('openMonitor'),
     };
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -192,11 +193,18 @@
         els.statusText.textContent = message;
     }
 
-    // ── Utility ─────────────────────────────────────────────────────
+    // Utility
     function escapeHTML(str) {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    // Event Listeners
+    if (els.openMonitor) {
+        els.openMonitor.addEventListener('click', () => {
+            chrome.tabs.create({ url: chrome.runtime.getURL('monitor/monitor.html') });
+        });
     }
 
     // Run
