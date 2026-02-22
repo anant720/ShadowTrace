@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }) {
                 boxShadow: 'var(--shadow-md)'
             }}>
                 <div style={{ marginBottom: '48px' }}>
-                    <img src="/favicon.ico" alt="Logo" style={{ width: '32px', height: '32px' }} />
+                    <img src="/dashboard_logo.png" alt="Logo" style={{ width: '48px', height: '48px' }} />
                 </div>
                 <nav style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <SideMenuItem href="/" svg={

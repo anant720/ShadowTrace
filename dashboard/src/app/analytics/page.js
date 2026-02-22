@@ -42,65 +42,70 @@ export default function AnalyticsPage() {
 
     return (
         <DashboardLayout>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '24px' }}>Security Analytics</h1>
-                <p style={{ color: 'var(--secondary)' }}>Deep dive into threat vectors and detection patterns</p>
+            <div style={{ padding: '20px 0 60px 0' }}>
+                <h1 style={{ fontSize: '72px', fontWeight: '800', letterSpacing: '-4px', lineHeight: 1, color: 'var(--text-main)', marginBottom: '16px' }}>
+                    Security Analytics
+                </h1>
+                <p style={{ fontSize: '20px', color: 'var(--text-muted)', maxWidth: '600px', fontWeight: '500' }}>
+                    Deep dive into threat vectors and detection patterns across the global network.
+                </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-                <div className="glass" style={{ padding: '24px', borderRadius: '12px', height: '350px' }}>
-                    <h3 style={{ marginBottom: '24px', fontSize: '16px' }}>Risk Score Evolution (30 Days)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '48px' }}>
+                <div className="st-card" style={{ padding: '40px', height: '450px' }}>
+                    <h3 style={{ marginBottom: '40px', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Risk Evolution</h3>
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={trends}>
                             <defs>
                                 <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
                                     <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2e" />
-                            <XAxis dataKey="date" stroke="var(--secondary)" fontSize={10} />
-                            <YAxis stroke="var(--secondary)" fontSize={10} domain={[0, 100]} />
-                            <Tooltip contentStyle={{ background: '#131316', border: '1px solid #1f1f23' }} />
-                            <Area type="monotone" dataKey="avg_risk" stroke="var(--primary)" fillOpacity={1} fill="url(#colorRisk)" />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} domain={[0, 100]} />
+                            <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
+                            <Area type="monotone" dataKey="avg_risk" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorRisk)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
-                <div className="glass" style={{ padding: '24px', borderRadius: '12px', height: '350px' }}>
-                    <h3 style={{ marginBottom: '24px', fontSize: '16px' }}>Threat Concentration by TLD</h3>
+                <div className="st-card" style={{ padding: '40px', height: '450px' }}>
+                    <h3 style={{ marginBottom: '40px', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Threat Concentration</h3>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={tlds} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2e" horizontal={false} />
-                            <XAxis type="number" stroke="var(--secondary)" fontSize={10} />
-                            <YAxis dataKey="tld" type="category" stroke="var(--secondary)" fontSize={11} width={60} />
-                            <Tooltip contentStyle={{ background: '#131316', border: '1px solid #1f1f23' }} />
-                            <Bar dataKey="suspicious_scans" fill="var(--accent-red)" radius={[0, 4, 4, 0]} />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '600' }} />
+                            <YAxis dataKey="tld" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: '700' }} width={60} />
+                            <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '20px' }} />
+                            <Bar dataKey="suspicious_scans" fill="var(--primary)" radius={[0, 12, 12, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            <div className="glass" style={{ padding: '24px', borderRadius: '12px' }}>
-                <h3 style={{ marginBottom: '24px', fontSize: '16px' }}>Engine Performance Matrix</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div className="st-card" style={{ padding: '40px' }}>
+                <h3 style={{ marginBottom: '40px', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Engine Performance Matrix</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
                     {Object.entries(engines).map(([name, data]) => (
-                        <div key={name} style={{ border: '1px solid #1f1f23', padding: '16px', borderRadius: '8px' }}>
-                            <p style={{ color: 'var(--secondary)', fontSize: '12px', textTransform: 'capitalize' }}>
+                        <div key={name} style={{ background: 'var(--bg-main)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.03)' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                 {name.replace('_', ' ')}
                             </p>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '8px 0' }}>
-                                <h4 style={{ fontSize: '24px' }}>{data.avg_score}</h4>
-                                <span style={{ fontSize: '12px', color: 'var(--secondary)' }}>/ {data.max_score}</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '12px 0' }}>
+                                <h4 style={{ fontSize: '32px', fontWeight: '800' }}>{data.avg_score}</h4>
+                                <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>/ {data.max_score}</span>
                             </div>
-                            <div style={{ height: '4px', background: '#1c1c21', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ height: '8px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
                                 <div style={{
                                     height: '100%',
                                     width: `${(data.avg_score / data.max_score) * 100}%`,
                                     background: 'var(--primary)'
                                 }} />
                             </div>
-                            <p style={{ fontSize: '11px', color: 'var(--secondary)', marginTop: '8px' }}>Weight: {data.weight}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>Weight: {data.weight}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '800' }}>Optimal</span>
+                            </div>
                         </div>
                     ))}
                 </div>

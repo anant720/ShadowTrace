@@ -40,55 +40,70 @@ export default function AnomaliesPage() {
 
     return (
         <DashboardLayout>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '24px' }}>ML Anomaly Alerts</h1>
-                <p style={{ color: 'var(--secondary)' }}>Automated detection of statistical spikes and suspicious campaigns</p>
+            <div style={{ padding: '20px 0 60px 0' }}>
+                <h1 style={{ fontSize: '72px', fontWeight: '800', letterSpacing: '-4px', lineHeight: 1, color: 'var(--text-main)', marginBottom: '16px' }}>
+                    Machine Learning Alerts
+                </h1>
+                <p style={{ fontSize: '20px', color: 'var(--text-muted)', maxWidth: '600px', fontWeight: '500' }}>
+                    Automated detection of statistical spikes and suspicious campaigns across the cluster.
+                </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {anomalies.map((a, i) => (
-                    <div key={i} className="glass" style={{
-                        padding: '20px',
-                        borderRadius: '12px',
+                    <div key={i} className="st-card" style={{
+                        padding: '32px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        borderLeft: `4px solid ${a.severity === 'high' ? 'var(--accent-red)' : 'var(--accent-amber)'}`
+                        borderLeft: `8px solid ${a.severity === 'high' ? 'var(--danger)' : 'var(--warning)'}`
                     }}>
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                                 <span style={{
-                                    fontSize: '10px',
+                                    fontSize: '11px',
                                     textTransform: 'uppercase',
-                                    background: a.severity === 'high' ? '#4a1111' : '#4a3311',
-                                    color: a.severity === 'high' ? '#ff4d4d' : '#ffaa00',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    fontWeight: 'bold'
+                                    background: a.severity === 'high' ? 'rgba(255, 59, 48, 0.1)' : 'rgba(255, 204, 0, 0.1)',
+                                    color: a.severity === 'high' ? 'var(--danger)' : '#B88E00',
+                                    padding: '6px 14px',
+                                    borderRadius: '12px',
+                                    fontWeight: '800',
+                                    letterSpacing: '0.5px'
                                 }}>
                                     {a.type} | {a.severity}
                                 </span>
-                                <span style={{ fontWeight: '600' }}>{a.domain || 'Global Spike'}</span>
-                                <span style={{ fontSize: '12px', color: 'var(--secondary)' }}>{new Date(a.detected_at).toLocaleString()}</span>
+                                <span style={{ fontWeight: '800', fontSize: '18px', color: 'var(--text-main)' }}>{a.domain || 'Global Signal Spike'}</span>
+                                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(a.detected_at).toLocaleString()}</span>
                             </div>
-                            <p style={{ color: 'var(--foreground)', fontSize: '14px' }}>{a.details}</p>
+                            <p style={{ color: 'var(--text-main)', fontSize: '16px', fontWeight: '500' }}>{a.details}</p>
                         </div>
 
                         {!a.acknowledged ? (
                             <button
                                 onClick={() => acknowledge(a._id)}
-                                style={{ background: 'var(--primary)', color: 'black', padding: '8px 16px', fontSize: '13px' }}
+                                style={{
+                                    background: 'var(--primary)',
+                                    color: 'white',
+                                    padding: '12px 28px',
+                                    fontSize: '14px',
+                                    fontWeight: '700',
+                                    borderRadius: '16px',
+                                    boxShadow: '0 8px 16px rgba(0, 184, 148, 0.2)'
+                                }}
                             >
                                 Acknowledge
                             </button>
                         ) : (
-                            <span style={{ color: 'var(--accent-green)', fontSize: '13px' }}>✓ Acknowledged</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: '800', fontSize: '14px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>
+                                Acknowledged
+                            </div>
                         )}
                     </div>
                 ))}
                 {anomalies.length === 0 && (
-                    <div className="glass" style={{ padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--secondary)' }}>
-                        No anomalies detected in the last 24 hours. System stable.
+                    <div className="st-card" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: '600', fontSize: '18px' }}>
+                        No behavioral anomalies detected in the current analysis window.
                     </div>
                 )}
             </div>
