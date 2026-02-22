@@ -75,7 +75,21 @@ export default function AnomaliesPage() {
                                 <span style={{ fontWeight: '800', fontSize: '18px', color: 'var(--text-main)' }}>{a.domain || 'Global Signal Spike'}</span>
                                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{new Date(a.detected_at).toLocaleString()}</span>
                             </div>
-                            <p style={{ color: 'var(--text-main)', fontSize: '16px', fontWeight: '500' }}>{a.details}</p>
+                            <p style={{ color: 'var(--text-main)', fontSize: '16px', fontWeight: '500', marginBottom: '16px' }}>{a.details}</p>
+                            {a.reasoning && (
+                                <div style={{
+                                    background: 'var(--bg-main)',
+                                    padding: '16px',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(0,0,0,0.03)',
+                                    fontSize: '14px',
+                                    color: 'var(--text-muted)',
+                                    lineHeight: '1.5'
+                                }}>
+                                    <strong style={{ color: 'var(--text-main)', display: 'block', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Intelligence Reasoning</strong>
+                                    {a.reasoning}
+                                </div>
+                            )}
                         </div>
 
                         {!a.acknowledged ? (

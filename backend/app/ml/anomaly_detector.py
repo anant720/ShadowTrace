@@ -66,7 +66,13 @@ class AnomalyDetector:
                     "severity": "high" if z > 3 else "medium",
                     "domain": doc["_id"],
                     "details": f"Risk deviation: {z:.1f}σ",
-                    "metadata": {"z": round(z, 2), "avg": round(doc["avg"], 1)}
+                    "reasoning": f"Domain risk score ({doc['avg']:.1f}) is significantly higher than the global baseline ({mean:.1f}).",
+                    "metadata": {
+                        "z": round(z, 2),
+                        "avg": round(doc['avg'], 1),
+                        "baseline": round(mean, 1),
+                        "std_dev": round(std_dev, 2)
+                    }
                 })
         return anomalies
 
@@ -79,11 +85,13 @@ class AnomalyDetector:
         avg = total_24h / 24
 
         if avg > 0 and current > max(avg * 3, 10):
+            ratio = current / avg
             anomalies.append({
                 "type": "spike",
-                "severity": "high" if (current / avg) > 5 else "medium",
+                "severity": "high" if ratio > 5 else "medium",
                 "details": f"Volume spike: {current} scans/hr (avg: {avg:.1f})",
-                "metadata": {"current": current, "avg": round(avg, 1)}
+                "reasoning": f"Current hourly volume is {ratio:.1f}x higher than the 24h rolling average.",
+                "metadata": {"current": current, "avg": round(avg, 1), "ratio": round(ratio, 2)}
             })
         return anomalies
 
@@ -106,6 +114,7 @@ class AnomalyDetector:
                     "severity": "high" if count >= 5 else "medium",
                     "domain": f"*.{tld}",
                     "details": f"Cluster: {count} risky domains in .{tld}",
+                    "reasoning": f"Statistical concentration of {count} high-risk domains detected on the .{tld} TLD within 6 hours.",
                     "metadata": {"tld": tld, "count": count}
                 })
         return anomalies

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/utils/api';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
@@ -13,6 +14,7 @@ export default function OverviewPage() {
   const [trends, setTrends] = useState([]);
   const [recentScans, setRecentScans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const fetchData = async () => {
     try {
@@ -27,6 +29,28 @@ export default function OverviewPage() {
     } catch (err) {
       console.error('Failed to fetch data:', err);
     }
+  };
+
+  const downloadCSV = () => {
+    if (!trends.length) return alert('No data available to export.');
+
+    const headers = ['Date', 'Total Scans', 'Average Risk Score'];
+    const rows = trends.map(t => [t.date, t.total_scans, t.avg_risk]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `shadowtrace_insights_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   useEffect(() => {
@@ -100,14 +124,14 @@ export default function OverviewPage() {
         </p>
         <div style={{ display: 'flex', gap: '16px', marginTop: '32px' }}>
           <button
-            onClick={() => alert('Accessing secure audit logs...')}
-            style={{ background: 'var(--primary)', color: 'white', padding: '16px 36px', borderRadius: '20px', fontSize: '15px', boxShadow: '0 10px 20px rgba(0, 184, 148, 0.3)', cursor: 'pointer' }}
+            onClick={() => router.push('/analytics')}
+            style={{ background: 'var(--primary)', color: 'white', padding: '16px 36px', borderRadius: '20px', fontSize: '15px', boxShadow: '0 10px 20px rgba(0, 184, 148, 0.3)', cursor: 'pointer', border: 'none', fontWeight: '700' }}
           >
             Audit Logs
           </button>
           <button
-            onClick={() => alert('Generating security insights report...')}
-            style={{ background: 'white', color: 'var(--text-main)', padding: '16px 36px', borderRadius: '20px', fontSize: '15px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}
+            onClick={downloadCSV}
+            style={{ background: 'white', color: 'var(--text-main)', padding: '16px 36px', borderRadius: '20px', fontSize: '15px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer', fontWeight: '700' }}
           >
             Export Insights
           </button>
