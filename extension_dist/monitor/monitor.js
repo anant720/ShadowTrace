@@ -94,21 +94,28 @@
                 selectedRequestId = req.id;
                 inspector.classList.add('open');
                 renderTable(allRequests); // Refresh to show selection
-                updateInspector();
+                updateInspector(req);
             });
 
             body.appendChild(tr);
         });
     }
 
-    function updateInspector() {
-        const req = allRequests.find(r => r.id === selectedRequestId);
-        if (!req) return;
+    function updateInspector(manualReq = null) {
+        const req = manualReq || allRequests.find(r => String(r.id) === String(selectedRequestId));
+        if (!req) {
+            console.warn('[ShadowTrace] No request found for ID:', selectedRequestId);
+            return;
+        }
+
+        console.log('[ShadowTrace] Inspecting request:', req.id, req.url);
 
         const statusClass = req.statusCode >= 400 ? 'error' : req.statusCode >= 300 ? 'redirect' : 'success';
+        const safeReqHeaders = req.requestHeaders || [];
+        const safeResHeaders = req.responseHeaders || [];
 
         inspectorContent.innerHTML = `
-            <div class="m-status-pill ${statusClass}" style="margin-bottom: 20px;">STATUS ${req.statusCode} ${req.method}</div>
+            <div class="m-status-pill ${statusClass}" style="margin-bottom: 20px;">STATUS ${req.statusCode || 'FAILED'} ${req.method}</div>
             
             <div class="m-section-title">Request URL</div>
             <div class="m-header-list" style="word-break: break-all; margin-bottom: 20px; color: #3b82f6;">${req.url}</div>
@@ -120,7 +127,7 @@
 
             <div class="m-section-title">Request Headers</div>
             <div class="m-header-list">
-                ${req.requestHeaders.length > 0 ? req.requestHeaders.map(h => `
+                ${safeReqHeaders.length > 0 ? safeReqHeaders.map(h => `
                     <div class="m-header-item">
                         <span class="m-header-name">${h.name}:</span>
                         <span class="m-header-value">${h.value}</span>
@@ -130,7 +137,7 @@
 
             <div class="m-section-title">Response Headers</div>
             <div class="m-header-list" style="border-color: #10b981;">
-                ${req.responseHeaders.length > 0 ? req.responseHeaders.map(h => `
+                ${safeResHeaders.length > 0 ? safeResHeaders.map(h => `
                     <div class="m-header-item">
                         <span class="m-header-name" style="color: #10b981">${h.name}:</span>
                         <span class="m-header-value">${h.value}</span>
@@ -143,6 +150,7 @@
                 <div class="m-header-item"><span class="m-header-name">Type:</span> <span class="m-header-value">${req.type}</span></div>
                 <div class="m-header-item"><span class="m-header-name">Timestamp:</span> <span class="m-header-value">${new Date(req.timestamp).toISOString()}</span></div>
                 <div class="m-header-item"><span class="m-header-name">Request ID:</span> <span class="m-header-value">${req.id}</span></div>
+                ${req.error ? `<div class="m-header-item" style="color: #ef4444"><span class="m-header-name">Error:</span> <span class="m-header-value">${req.error}</span></div>` : ''}
             </div>
         `;
     }
