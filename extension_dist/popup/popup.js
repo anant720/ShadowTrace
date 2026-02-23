@@ -202,8 +202,10 @@
 
     // Event Listeners
     if (els.openMonitor) {
-        els.openMonitor.addEventListener('click', () => {
-            chrome.tabs.create({ url: chrome.runtime.getURL('monitor/monitor.html') });
+        els.openMonitor.addEventListener('click', async () => {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const url = chrome.runtime.getURL(`monitor/monitor.html?tabId=${tab?.id}`);
+            chrome.tabs.create({ url });
         });
     }
 

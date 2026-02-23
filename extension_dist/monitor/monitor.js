@@ -11,11 +11,26 @@
     let currentTabId = null;
 
     async function init() {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab) {
-            currentTabId = tab.id;
-            const url = new URL(tab.url);
-            tabInfo.textContent = `Active Tab: ${url.hostname}`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTabId = urlParams.get('tabId');
+
+        if (urlTabId) {
+            currentTabId = parseInt(urlTabId);
+            chrome.tabs.get(currentTabId, (tab) => {
+                if (chrome.runtime.lastError || !tab) {
+                    tabInfo.textContent = `Target Tab ID: ${currentTabId} (Inactive)`;
+                } else {
+                    const url = new URL(tab.url);
+                    tabInfo.textContent = `Active Tab: ${url.hostname}`;
+                }
+            });
+        } else {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab) {
+                currentTabId = tab.id;
+                const url = new URL(tab.url);
+                tabInfo.textContent = `Active Tab: ${url.hostname}`;
+            }
         }
 
         pollRequests();
