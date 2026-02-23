@@ -11,11 +11,8 @@ export default function ReportsPage() {
     useEffect(() => {
         const fetchReports = async () => {
             try {
-                const data = await apiRequest('/analytics/summary'); // Just to get stats, but I need a list endpoint
-                // I don't have a specific GET /analytics/reports yet, let's just use the stats one or add it.
-                // For now, I'll assume I have it or add it to the backend.
-                const res = await apiRequest('/report'); // Existing report list? No, there is only POST /report
-                setReports([]); // Placeholder
+                const data = await apiRequest('/report');
+                setReports(data.reports || []);
             } catch (err) {
                 console.error('Failed to fetch reports:', err);
             } finally {

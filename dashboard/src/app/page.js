@@ -253,7 +253,7 @@ export default function OverviewPage() {
                       <button
                         onClick={async () => {
                           try {
-                            await apiRequest('/feedback/correct', { method: 'POST', body: { domain: scan.domain, actual_risk: 'Safe', analyst_notes: 'Manual whitelist' } });
+                            await apiRequest('/feedback/correct', 'POST', { domain: scan.domain, actual_risk: 'Safe', analyst_notes: 'Manual whitelist' });
                             alert(`Confirmed ${scan.domain} as SAFE. Training queue updated.`);
                             fetchData();
                           } catch (e) { alert('Action failed'); }
@@ -265,7 +265,7 @@ export default function OverviewPage() {
                       <button
                         onClick={async () => {
                           try {
-                            await apiRequest('/feedback/correct', { method: 'POST', body: { domain: scan.domain, actual_risk: 'Dangerous', analyst_notes: 'Manual phishing confirmation' } });
+                            await apiRequest('/feedback/correct', 'POST', { domain: scan.domain, actual_risk: 'Dangerous', analyst_notes: 'Manual phishing confirmation' });
                             alert(`Confirmed ${scan.domain} as DANGEROUS. Model retraining triggered.`);
                             fetchData();
                           } catch (e) { alert('Action failed'); }

@@ -15,6 +15,21 @@ logger = logging.getLogger("shadowtrace.routers.report")
 router = APIRouter(tags=["Reporting"])
 
 
+@router.get("/report", summary="Get all user-submitted reports")
+async def get_reports(
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    _user: dict = Depends(require_analyst)
+):
+    cursor = db.reports.find().sort("timestamp", -1).limit(50)
+    results = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        if "timestamp" in doc and isinstance(doc["timestamp"], datetime):
+            doc["timestamp"] = doc["timestamp"].isoformat()
+        results.append(doc)
+    return {"reports": results}
+
+
 @router.post("/report", response_model=ReportResponse, summary="Report a suspicious domain")
 async def report_domain(
     request: ReportRequest,
