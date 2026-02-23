@@ -11,7 +11,7 @@ try:
     from app.ml.features import FeatureEngineer
 except ImportError:
     # Local fallback for standalone training
-    pass
+    FeatureEngineer = None
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -23,9 +23,19 @@ class EnterpriseTrainer:
     Automates the calibration of Layer 1 (XGBoost) and Layer 4 (Anomaly) engines.
     """
 
-    def __init__(self, data_path: str = "backend/data/phishing_dataset.csv"):
-        self.data_path = data_path
-        self.model_dir = "app/ml/models"
+    def __init__(self, data_path: str = None):
+        # Robust path detection
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.model_dir = os.path.join(base_dir, "models")
+        
+        # Default data path relative to backend root
+        if data_path is None:
+            # Assume backend root is parent of app
+            project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
+            self.data_path = os.path.join(project_root, "data", "phishing_dataset.csv")
+        else:
+            self.data_path = data_path
+            
         os.makedirs(self.model_dir, exist_ok=True)
 
     def load_and_preprocess(self):

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from app.config import settings
 from app.ml.anomaly_detector import AnomalyDetector
-from train_ensemble import EnterpriseTrainer
+from app.ml.trainer import EnterpriseTrainer
 
 logger = logging.getLogger("shadowtrace.services.background_tasks")
 _tasks = []

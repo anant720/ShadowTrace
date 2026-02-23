@@ -14,15 +14,20 @@ class EnsembleScorer:
 
     def __init__(self):
         self.logger = logging.getLogger("shadowtrace.ml.ensemble")
-        self.model_dir = "backend/app/ml/models"
+        # Robust path detection relative to this file
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.model_dir = os.path.join(base_dir, "models")
         
         # Load trained models
         try:
-            self.l1_model = joblib.load(os.path.join(self.model_dir, "l1_xgb.joblib"))
-            self.l4_model = joblib.load(os.path.join(self.model_dir, "l4_iso.joblib"))
-            self.logger.info("ShadowTrace Enterprise Models Loaded Successfully.")
+            l1_path = os.path.join(self.model_dir, "l1_xgb.joblib")
+            l4_path = os.path.join(self.model_dir, "l4_iso.joblib")
+            
+            self.l1_model = joblib.load(l1_path)
+            self.l4_model = joblib.load(l4_path)
+            self.logger.info(f"ShadowTrace Enterprise Models Loaded Successfully from {self.model_dir}")
         except Exception as e:
-            self.logger.error(f"Failed to load enterprise models: {e}. Using heuristic fallback.")
+            self.logger.error(f"Failed to load enterprise models from {self.model_dir}: {e}. Using heuristic fallback.")
             self.l1_model = None
             self.l4_model = None
 
