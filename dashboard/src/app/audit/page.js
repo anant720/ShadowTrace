@@ -67,6 +67,7 @@ export default function AuditPage() {
                         <thead>
                             <tr style={{ textAlign: 'left' }}>
                                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>TIMESTAMP</th>
+                                <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>USER</th>
                                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>DOMAIN SOURCE</th>
                                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>RISK SCORE</th>
                                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>STATUS</th>
@@ -87,6 +88,9 @@ export default function AuditPage() {
                                     <tr key={scan._id} style={{ background: 'var(--bg-main)', borderRadius: '16px' }}>
                                         <td style={{ padding: '20px 24px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', color: 'var(--text-muted)', borderRadius: '16px 0 0 16px' }}>
                                             {formatForensicTime(scan.timestamp)}
+                                        </td>
+                                        <td style={{ padding: '20px 24px', fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                            {scan.user_email?.split('@')[0] || 'anonymous'}
                                         </td>
                                         <td style={{ padding: '20px 24px', fontWeight: '800', color: 'var(--text-main)' }}>{scan.domain}</td>
                                         <td style={{ padding: '20px 24px', fontFamily: 'monospace', fontWeight: '800', fontSize: '16px', color: 'var(--primary)' }}>
@@ -138,6 +142,10 @@ export default function AuditPage() {
                                 <div style={{ background: 'var(--bg-main)', padding: '20px', borderRadius: '16px' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Consensus Risk</p>
                                     <h4 style={{ fontSize: '24px', fontWeight: '800', color: getRiskColor(selectedScan.risk_level) }}>{selectedScan.final_risk_score}</h4>
+                                </div>
+                                <div style={{ background: 'var(--bg-main)', padding: '20px', borderRadius: '16px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Asset Owner</p>
+                                    <h4 style={{ fontSize: '14px', fontWeight: '800', wordBreak: 'break-all' }}>{selectedScan.user_email || 'anonymous@shadowtrace.local'}</h4>
                                 </div>
                                 <div style={{ background: 'var(--bg-main)', padding: '20px', borderRadius: '16px' }}>
                                     <p style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Match Confidence</p>

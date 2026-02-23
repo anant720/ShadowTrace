@@ -80,6 +80,7 @@ class NetworkRequest(BaseModel):
 class MetaInfo(BaseModel):
     extensionVersion: Optional[str] = None
     userAgent: Optional[str] = Field(default=None, max_length=512)
+    user_email: Optional[str] = Field(default=None, max_length=254)
 
 
 class AnalyzeRequest(BaseModel):

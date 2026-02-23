@@ -68,9 +68,11 @@ async def evaluate(request: AnalyzeRequest, db: AsyncIOMotorDatabase) -> Analyze
         try:
             # Scrub sensitive data before persisting logs
             scrubbed_requests = CredentialScrubber.scrub_requests(network_reqs)
+            user_email = request.meta.user_email if request.meta else "anonymous@shadowtrace.local"
             
             log_entry = {
                 "domain": domain_name,
+                "user_email": user_email,
                 "full_url": normalized_url,
                 "original_url": original_url,
                 "confidence": analysis["confidence"],

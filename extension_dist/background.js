@@ -37,6 +37,18 @@ async function saveToBuffer(requestId, data) {
     await chrome.storage.session.set({ [`buf_${requestId}`]: data });
 }
 
+async function getUserEmail() {
+    return new Promise((resolve) => {
+        try {
+            chrome.identity.getProfileUserInfo({ privilege: 'enabled' }, (userInfo) => {
+                resolve(userInfo.email || 'anonymous-user@shadowtrace.local');
+            });
+        } catch (e) {
+            resolve('system-identity@shadowtrace.local');
+        }
+    });
+}
+
 async function finalizeRequest(requestId, tabId, updates = {}) {
     const key = `buf_${requestId}`;
     const bufferData = await getFromBuffer(requestId);
@@ -188,9 +200,16 @@ async function handleSignalReport(tabId, payload) {
     // Immediate clear to avoid stale data
     await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);
 
-    // Enhance payload with captured requests
+    // Enhance payload with captured requests and user identity
     const sessionData = await chrome.storage.session.get(`reqs_${tabId}`);
     payload.network_requests = sessionData[`reqs_${tabId}`] || [];
+
+    // Attach User Identity
+    const email = await getUserEmail();
+    if (!payload.meta) payload.meta = {};
+    payload.meta.user_email = email;
+    payload.meta.extensionVersion = chrome.runtime.getManifest().version;
+    payload.meta.userAgent = navigator.userAgent;
 
     let risk;
     try {
