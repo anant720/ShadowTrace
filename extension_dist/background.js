@@ -13,27 +13,54 @@ const CONFIG = {
     MAX_REQUESTS_LOGGED: 50
 };
 
-// ── Network Monitor ─────────────────────────────────────────────────
+// ── Network Monitor (Burp Suite Mode) ───────────────────────────────
+const requestBuffer = {};
+
 chrome.webRequest.onBeforeRequest.addListener(
     (details) => {
         if (details.tabId <= 0) return;
-
-        const request = {
+        requestBuffer[details.requestId] = {
             id: details.requestId,
             url: details.url,
             method: details.method,
             type: details.type,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            requestHeaders: [],
+            responseHeaders: [],
+            statusCode: 0
         };
-
-        chrome.storage.session.get(`reqs_${details.tabId}`).then(data => {
-            const reqs = data[`reqs_${details.tabId}`] || [];
-            reqs.unshift(request);
-            if (reqs.length > CONFIG.MAX_REQUESTS_LOGGED) reqs.pop();
-            chrome.storage.session.set({ [`reqs_${details.tabId}`]: reqs });
-        });
     },
     { urls: ["<all_urls>"] }
+);
+
+chrome.webRequest.onBeforeSendHeaders.addListener(
+    (details) => {
+        if (requestBuffer[details.requestId]) {
+            requestBuffer[details.requestId].requestHeaders = details.requestHeaders || [];
+        }
+    },
+    { urls: ["<all_urls>"] },
+    ["requestHeaders", "extraHeaders"]
+);
+
+chrome.webRequest.onHeadersReceived.addListener(
+    (details) => {
+        const req = requestBuffer[details.requestId];
+        if (req) {
+            req.responseHeaders = details.responseHeaders || [];
+            req.statusCode = details.statusCode;
+
+            chrome.storage.session.get(`reqs_${details.tabId}`).then(data => {
+                const reqs = data[`reqs_${details.tabId}`] || [];
+                reqs.unshift(req);
+                if (reqs.length > CONFIG.MAX_REQUESTS_LOGGED) reqs.pop();
+                chrome.storage.session.set({ [`reqs_${details.tabId}`]: reqs });
+            });
+            delete requestBuffer[details.requestId];
+        }
+    },
+    { urls: ["<all_urls>"] },
+    ["responseHeaders", "extraHeaders"]
 );
 
 // ── Message Listener ────────────────────────────────────────────────

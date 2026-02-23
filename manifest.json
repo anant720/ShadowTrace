@@ -8,7 +8,8 @@
         "storage",
         "scripting",
         "identity",
-        "webRequest"
+        "webRequest",
+        "webRequestExtraHeaders"
     ],
     "host_permissions": [
         "<all_urls>"

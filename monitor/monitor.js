@@ -7,8 +7,13 @@
     const statCount = $('statCount');
     const statPost = $('statPost');
     const clearBtn = $('clearBtn');
+    const inspector = $('inspector');
+    const inspectorContent = $('inspectorContent');
+    const closeInspector = $('closeInspector');
 
     let currentTabId = null;
+    let allRequests = [];
+    let selectedRequestId = null;
 
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -42,7 +47,9 @@
 
         chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: currentTabId }, (data) => {
             if (data && data.requests) {
+                allRequests = data.requests;
                 renderTable(data.requests);
+                if (selectedRequestId) updateInspector();
             }
         });
     }
@@ -57,24 +64,83 @@
         const postCount = requests.filter(r => r.method === 'POST').length;
         statPost.textContent = `${Math.round((postCount / requests.length) * 100)}%`;
 
-        const html = requests.map(req => {
+        body.innerHTML = '';
+        requests.forEach(req => {
             const time = formatTime(req.timestamp);
-            const risk = req.method === 'POST' ? 'MEDIUM' : 'LOW';
-            const riskClass = req.method === 'POST' ? 'm-risk-med' : 'm-risk-low';
+            const status = req.statusCode || 'PENDING';
+            const statusClass = status >= 400 ? 'error' : status >= 300 ? 'redirect' : 'success';
+            const isSelected = req.id === selectedRequestId;
 
-            return `
-                <tr>
-                    <td>${time}</td>
-                    <td><span class="m-method ${req.method}">${req.method}</span></td>
-                    <td style="color: #94A3B8; font-size: 12px;">${req.type}</td>
-                    <td class="m-url" title="${req.url}">${req.url}</td>
-                    <td class="${riskClass}">${risk}</td>
-                </tr>
+            const tr = document.createElement('tr');
+            if (isSelected) tr.classList.add('selected');
+            tr.style.cursor = 'pointer';
+            tr.innerHTML = `
+                <td>${time}</td>
+                <td><span class="m-method ${req.method}">${req.method}</span></td>
+                <td style="color: #94A3B8; font-size: 12px;">${req.type}</td>
+                <td class="m-url" title="${req.url}">${req.url}</td>
+                <td style="font-weight: 700; font-size: 11px;">
+                    <span class="m-status-pill ${statusClass}">${status}</span>
+                </td>
             `;
-        }).join('');
 
-        body.innerHTML = html;
+            tr.addEventListener('click', () => {
+                selectedRequestId = req.id;
+                inspector.classList.add('open');
+                renderTable(allRequests); // Refresh to show selection
+                updateInspector();
+            });
+
+            body.appendChild(tr);
+        });
     }
+
+    function updateInspector() {
+        const req = allRequests.find(r => r.id === selectedRequestId);
+        if (!req) return;
+
+        const statusClass = req.statusCode >= 400 ? 'error' : req.statusCode >= 300 ? 'redirect' : 'success';
+
+        inspectorContent.innerHTML = `
+            <div class="m-status-pill ${statusClass}" style="margin-bottom: 20px;">STATUS ${req.statusCode} ${req.method}</div>
+            
+            <div class="m-section-title">Request URL</div>
+            <div class="m-header-list" style="word-break: break-all; margin-bottom: 20px; color: #3b82f6;">${req.url}</div>
+
+            <div class="m-section-title">Request Headers</div>
+            <div class="m-header-list">
+                ${req.requestHeaders.length > 0 ? req.requestHeaders.map(h => `
+                    <div class="m-header-item">
+                        <span class="m-header-name">${h.name}:</span>
+                        <span class="m-header-value">${h.value}</span>
+                    </div>
+                `).join('') : '<div style="color: #94a3b8">No headers captured</div>'}
+            </div>
+
+            <div class="m-section-title">Response Headers</div>
+            <div class="m-header-list" style="border-color: #10b981;">
+                ${req.responseHeaders.length > 0 ? req.responseHeaders.map(h => `
+                    <div class="m-header-item">
+                        <span class="m-header-name" style="color: #10b981">${h.name}:</span>
+                        <span class="m-header-value">${h.value}</span>
+                    </div>
+                `).join('') : '<div style="color: #94a3b8">No headers captured</div>'}
+            </div>
+
+            <div class="m-section-title">Forensic Metadata</div>
+            <div class="m-header-list">
+                <div class="m-header-item"><span class="m-header-name">Type:</span> <span class="m-header-value">${req.type}</span></div>
+                <div class="m-header-item"><span class="m-header-name">Timestamp:</span> <span class="m-header-value">${new Date(req.timestamp).toISOString()}</span></div>
+                <div class="m-header-item"><span class="m-header-name">Request ID:</span> <span class="m-header-value">${req.id}</span></div>
+            </div>
+        `;
+    }
+
+    closeInspector.addEventListener('click', () => {
+        inspector.classList.remove('open');
+        selectedRequestId = null;
+        renderTable(allRequests);
+    });
 
     function formatTime(ts) {
         const d = new Date(ts);
@@ -88,7 +154,9 @@
     clearBtn.addEventListener('click', () => {
         if (!currentTabId) return;
         chrome.storage.session.remove(`reqs_${currentTabId}`);
+        allRequests = [];
         body.innerHTML = '';
+        inspector.classList.remove('open');
     });
 
     init();

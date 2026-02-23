@@ -41,7 +41,7 @@
                             <th>Method</th>
                             <th>Type</th>
                             <th>URL / Endpoint</th>
-                            <th>Risk Signal</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="requestBody">
@@ -51,6 +51,16 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div id="inspector" class="m-inspector">
+                <div class="m-inspector-header">
+                    <h2>Forensic Inspector</h2>
+                    <button id="closeInspector" class="m-close-btn">&times;</button>
+                </div>
+                <div id="inspectorContent" class="m-inspector-content">
+                    <p style="color: #64748b; padding: 20px;">Select a request to inspect deep packet details...</p>
+                </div>
             </div>
         </main>
 

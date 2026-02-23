@@ -158,73 +158,74 @@
             return;
         }
 
-        const shortUrl = req.url.split('?')[0];
-        const time = formatTime(req.timestamp);
-        return `
+        const html = requests.map(req => {
+            const shortUrl = req.url.split('?')[0];
+            const time = formatTime(req.timestamp);
+            return `
                 <div class="st-network-item">
                     <span class="st-method ${req.method}">${req.method}</span>
                     <span class="st-url" title="${req.url}">${shortUrl}</span>
                     <span style="font-size: 8.5px; opacity: 0.5; font-family: var(--st-font-mono)">${time}</span>
                 </div>
             `;
-    }).join('');
+        }).join('');
 
-    els.networkList.innerHTML = html;
-}
+        els.networkList.innerHTML = html;
+    }
 
     // ── Scanning State ──────────────────────────────────────────────
     function setScanning(tab) {
-    const container = document.querySelector('.st-container');
-    container.setAttribute('data-state', 'scanning');
-    try {
-        const url = new URL(tab.url);
-        els.hostname.textContent = url.hostname;
-        els.protocol.textContent = url.protocol.replace(':', '').toUpperCase();
-        els.protocol.className = `st-protocol ${url.protocol === 'https:' ? 'secure' : 'insecure'}`;
-    } catch {
-        els.hostname.textContent = 'Unknown page';
+        const container = document.querySelector('.st-container');
+        container.setAttribute('data-state', 'scanning');
+        try {
+            const url = new URL(tab.url);
+            els.hostname.textContent = url.hostname;
+            els.protocol.textContent = url.protocol.replace(':', '').toUpperCase();
+            els.protocol.className = `st-protocol ${url.protocol === 'https:' ? 'secure' : 'insecure'}`;
+        } catch {
+            els.hostname.textContent = 'Unknown page';
+        }
+
+        els.scoreNumber.textContent = '—';
+        els.levelBadge.textContent = 'SCANNING';
+        els.statusDot.className = 'st-status-dot';
+        els.statusText.textContent = 'Waiting for analysis...';
     }
 
-    els.scoreNumber.textContent = '—';
-    els.levelBadge.textContent = 'SCANNING';
-    els.statusDot.className = 'st-status-dot';
-    els.statusText.textContent = 'Waiting for analysis...';
-}
+    // ── Error State ─────────────────────────────────────────────────
+    function setError(message) {
+        els.hostname.textContent = 'Error';
+        els.scoreNumber.textContent = '!';
+        els.levelBadge.textContent = 'ERROR';
+        els.statusText.textContent = message;
+    }
 
-// ── Error State ─────────────────────────────────────────────────
-function setError(message) {
-    els.hostname.textContent = 'Error';
-    els.scoreNumber.textContent = '!';
-    els.levelBadge.textContent = 'ERROR';
-    els.statusText.textContent = message;
-}
+    function formatTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        const ms = String(d.getMilliseconds()).padStart(3, '0');
+        return `${h}:${m}:${s}.${ms}`;
+    }
 
-function formatTime(ts) {
-    if (!ts) return '';
-    const d = new Date(ts);
-    const h = String(d.getHours()).padStart(2, '0');
-    const m = String(d.getMinutes()).padStart(2, '0');
-    const s = String(d.getSeconds()).padStart(2, '0');
-    const ms = String(d.getMilliseconds()).padStart(3, '0');
-    return `${h}:${m}:${s}.${ms}`;
-}
+    // Utility
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
 
-// Utility
-function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
+    // Event Listeners
+    if (els.openMonitor) {
+        els.openMonitor.addEventListener('click', async () => {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const url = chrome.runtime.getURL(`monitor/monitor.html?tabId=${tab?.id}`);
+            chrome.tabs.create({ url });
+        });
+    }
 
-// Event Listeners
-if (els.openMonitor) {
-    els.openMonitor.addEventListener('click', async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const url = chrome.runtime.getURL(`monitor/monitor.html?tabId=${tab?.id}`);
-        chrome.tabs.create({ url });
-    });
-}
-
-// Run
-init();
-}) ();
+    // Run
+    init();
+})();
