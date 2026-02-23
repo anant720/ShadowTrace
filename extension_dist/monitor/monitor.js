@@ -1,6 +1,43 @@
 (() => {
     'use strict';
 
+    function extractSensitiveData(req) {
+        const sensitive = [];
+        const body = (req.requestBody || '').toLowerCase();
+        const headers = (req.requestHeaders || []);
+
+        // Passwords & Credentials
+        const credPatterns = ['pass', 'password', 'pwd', 'secret', 'token', 'apikey', 'api_key', 'auth'];
+
+        // Check Body (Form or JSON)
+        credPatterns.forEach(pattern => {
+            if (body.includes(pattern)) {
+                // Try to extract value
+                const match = body.match(new RegExp(`"${pattern}"\\s*:\\s*"([^"]+)"`)) ||
+                    body.match(new RegExp(`${pattern}=([^&]+)`));
+                if (match) sensitive.push({ type: 'CREDENTIAL', field: pattern, value: match[1] });
+            }
+        });
+
+        // Check Headers (Auth / Cookies)
+        headers.forEach(h => {
+            const name = h.name.toLowerCase();
+            const val = h.value.toLowerCase();
+
+            if (name === 'authorization' || name.includes('token') || name.includes('key')) {
+                sensitive.push({ type: 'AUTH_TOKEN', field: h.name, value: h.value });
+            }
+            if (name === 'cookie') {
+                const sessionMatches = h.value.match(/(sess|session|sid|id|jwt|auth)=([^;]+)/gi);
+                if (sessionMatches) {
+                    sessionMatches.forEach(m => sensitive.push({ type: 'SESSION_ID', field: 'Cookie/Session', value: m }));
+                }
+            }
+        });
+
+        return sensitive;
+    }
+
     const $ = (id) => document.getElementById(id);
     const body = $('requestBody');
     const tabInfo = $('tabInfo');
@@ -113,8 +150,25 @@
         const statusClass = req.statusCode >= 400 ? 'error' : req.statusCode >= 300 ? 'redirect' : 'success';
         const safeReqHeaders = req.requestHeaders || [];
         const safeResHeaders = req.responseHeaders || [];
+        const findings = extractSensitiveData(req);
+
+        let alertHtml = '';
+        if (findings.length > 0) {
+            alertHtml = `
+                <div class="m-sensitive-alert">
+                    <div class="m-alert-badge">⚠️ Sensitive Data Detected</div>
+                    ${findings.map(f => `
+                        <div class="m-alert-item">
+                            <span class="m-alert-label">${f.field}:</span>
+                            <span class="m-alert-value">${f.value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
 
         inspectorContent.innerHTML = `
+            ${alertHtml}
             <div class="m-status-pill ${statusClass}" style="margin-bottom: 20px;">STATUS ${req.statusCode || 'FAILED'} ${req.method}</div>
             
             <div class="m-section-title">Request URL</div>
