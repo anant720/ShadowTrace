@@ -33,6 +33,16 @@ export default function AuditPage() {
         return 'var(--danger)';
     };
 
+    const formatForensicTime = (ts) => {
+        if (!ts) return '—';
+        const d = new Date(ts);
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        const ms = String(d.getMilliseconds()).padStart(3, '0');
+        return `${h}:${m}:${s}.${ms}`;
+    };
+
     return (
         <DashboardLayout>
             <div style={{ padding: '20px 0 60px 0' }}>
@@ -75,8 +85,8 @@ export default function AuditPage() {
                             ) : (
                                 scans.map((scan) => (
                                     <tr key={scan._id} style={{ background: 'var(--bg-main)', borderRadius: '16px' }}>
-                                        <td style={{ padding: '20px 24px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)', borderRadius: '16px 0 0 16px' }}>
-                                            {new Date(scan.timestamp).toLocaleString()}
+                                        <td style={{ padding: '20px 24px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '600', color: 'var(--text-muted)', borderRadius: '16px 0 0 16px' }}>
+                                            {formatForensicTime(scan.timestamp)}
                                         </td>
                                         <td style={{ padding: '20px 24px', fontWeight: '800', color: 'var(--text-main)' }}>{scan.domain}</td>
                                         <td style={{ padding: '20px 24px', fontFamily: 'monospace', fontWeight: '800', fontSize: '16px', color: 'var(--primary)' }}>
@@ -119,7 +129,7 @@ export default function AuditPage() {
                         <div style={{ padding: '32px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <h2 style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>Forensic Report: {selectedScan.domain}</h2>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>ID: {selectedScan._id} | {new Date(selectedScan.timestamp).toLocaleString()}</p>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', fontFamily: 'monospace' }}>ID: {selectedScan._id} | {formatForensicTime(selectedScan.timestamp)}</p>
                             </div>
                             <button onClick={() => setSelectedScan(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-muted)' }}>&times;</button>
                         </div>
@@ -146,6 +156,7 @@ export default function AuditPage() {
                                         <thead>
                                             <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                                                 <th style={{ padding: '12px', fontSize: '10px', color: 'var(--text-muted)' }}>METHOD</th>
+                                                <th style={{ padding: '12px', fontSize: '10px', color: 'var(--text-muted)' }}>TIME (ms)</th>
                                                 <th style={{ padding: '12px', fontSize: '10px', color: 'var(--text-muted)' }}>TYPE</th>
                                                 <th style={{ padding: '12px', fontSize: '10px', color: 'var(--text-muted)' }}>URL</th>
                                             </tr>
@@ -154,6 +165,7 @@ export default function AuditPage() {
                                             {selectedScan.network_requests.map((req, i) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.02)' }}>
                                                     <td style={{ padding: '12px', fontSize: '12px', fontWeight: '800', color: req.method === 'POST' ? 'var(--warning)' : 'var(--primary)' }}>{req.method}</td>
+                                                    <td style={{ padding: '12px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{formatForensicTime(req.timestamp)}</td>
                                                     <td style={{ padding: '12px', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>{req.type}</td>
                                                     <td style={{ padding: '12px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.url}</td>
                                                 </tr>

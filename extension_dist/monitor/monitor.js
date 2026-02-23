@@ -58,7 +58,7 @@
         statPost.textContent = `${Math.round((postCount / requests.length) * 100)}%`;
 
         const html = requests.map(req => {
-            const time = new Date(req.timestamp).toLocaleTimeString();
+            const time = formatTime(req.timestamp);
             const risk = req.method === 'POST' ? 'MEDIUM' : 'LOW';
             const riskClass = req.method === 'POST' ? 'm-risk-med' : 'm-risk-low';
 
@@ -74,6 +74,15 @@
         }).join('');
 
         body.innerHTML = html;
+    }
+
+    function formatTime(ts) {
+        const d = new Date(ts);
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        const ms = String(d.getMilliseconds()).padStart(3, '0');
+        return `${h}:${m}:${s}.${ms}`;
     }
 
     clearBtn.addEventListener('click', () => {
