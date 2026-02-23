@@ -53,10 +53,25 @@ chrome.webRequest.onBeforeRequest.addListener(
             if (details.requestBody.raw) {
                 try {
                     const decoder = new TextDecoder("utf-8");
-                    rawBody = decoder.decode(details.requestBody.raw[0].bytes);
+                    // Combine all raw byte chunks
+                    let combinedBytes = new Uint8Array(0);
+                    for (const chunk of details.requestBody.raw) {
+                        if (chunk.bytes) {
+                            let newBytes = new Uint8Array(combinedBytes.length + chunk.bytes.byteLength);
+                            newBytes.set(combinedBytes);
+                            newBytes.set(new Uint8Array(chunk.bytes), combinedBytes.length);
+                            combinedBytes = newBytes;
+                        }
+                    }
+                    rawBody = decoder.decode(combinedBytes);
                 } catch (e) { rawBody = "[Binary/Unparseable Data]"; }
             } else if (details.requestBody.formData) {
-                rawBody = JSON.stringify(details.requestBody.formData);
+                // Better formatting for form data
+                const params = [];
+                for (const key in details.requestBody.formData) {
+                    params.push(`${key}=${details.requestBody.formData[key].join(',')}`);
+                }
+                rawBody = params.join('&');
             }
         }
 

@@ -7,12 +7,12 @@
         const headers = (req.requestHeaders || []);
 
         // Passwords & Credentials
-        const credPatterns = ['pass', 'password', 'pwd', 'secret', 'token', 'apikey', 'api_key', 'auth'];
+        const credPatterns = ['pass', 'password', 'pwd', 'secret', 'token', 'apikey', 'api_key', 'auth', 'bearer', 'session', 'sid', 'jwt'];
 
         // Check Body (Form or JSON)
         credPatterns.forEach(pattern => {
             if (body.includes(pattern)) {
-                // Try to extract value
+                // Try to extract value from JSON or Form
                 const match = body.match(new RegExp(`"${pattern}"\\s*:\\s*"([^"]+)"`)) ||
                     body.match(new RegExp(`${pattern}=([^&]+)`));
                 if (match) sensitive.push({ type: 'CREDENTIAL', field: pattern, value: match[1] });
@@ -24,14 +24,24 @@
             const name = h.name.toLowerCase();
             const val = h.value.toLowerCase();
 
-            if (name === 'authorization' || name.includes('token') || name.includes('key')) {
-                sensitive.push({ type: 'AUTH_TOKEN', field: h.name, value: h.value });
+            // Authorization Headers
+            if (name === 'authorization' || name === 'x-api-key' || name === 'x-auth-token') {
+                sensitive.push({ type: 'AUTH_HEADER', field: h.name, value: h.value });
             }
+
+            // Session Cookies
             if (name === 'cookie') {
-                const sessionMatches = h.value.match(/(sess|session|sid|id|jwt|auth)=([^;]+)/gi);
-                if (sessionMatches) {
-                    sessionMatches.forEach(m => sensitive.push({ type: 'SESSION_ID', field: 'Cookie/Session', value: m }));
-                }
+                // More aggressive session cookie regex (matches common ones like connect.sid, PHPSESSID, etc.)
+                const sessionPatterns = [
+                    /(sess|session|sid|id|jwt|auth|token)=([^;]+)/gi,
+                    /(phpsessid|jsessionid|aspsessionid|connect\.sid|laravel_session|sessionid)=([^;]+)/gi
+                ];
+                sessionPatterns.forEach(regex => {
+                    const sessionMatches = h.value.match(regex);
+                    if (sessionMatches) {
+                        sessionMatches.forEach(m => sensitive.push({ type: 'SESSION_ID', field: 'Cookie', value: m }));
+                    }
+                });
             }
         });
 
@@ -212,7 +222,16 @@
 
             <div class="m-section-title">Request Body (Payload)</div>
             <div class="m-header-list" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2); color: #10b981;">
-                <pre style="white-space: pre-wrap; word-break: break-all;">${req.requestBody ? req.requestBody : '<span style="opacity: 0.5;">No payload captured (GET/Empty)</span>'}</pre>
+                <pre style="white-space: pre-wrap; word-break: break-all;">${(() => {
+                if (!req.requestBody) return '<span style="opacity: 0.5;">No payload captured (GET/Empty)</span>';
+                try {
+                    // Attempt to pretty-print JSON
+                    const parsed = JSON.parse(req.requestBody);
+                    return JSON.stringify(parsed, null, 4);
+                } catch (e) {
+                    return req.requestBody; // Fallback to raw text
+                }
+            })()}</pre>
             </div>
 
             <div class="m-section-title">Request Headers</div>
