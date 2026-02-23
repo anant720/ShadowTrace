@@ -21,6 +21,9 @@ async def get_summary(domain: str = Query(None), db: AsyncIOMotorDatabase = Depe
     async for doc in db.scan_logs.aggregate([{"$group": {"_id": "$risk_level", "count": {"$sum": 1}}}]):
         if doc["_id"]: risk_dist[doc["_id"]] = doc["count"]
 
+    yesterday_start = today_start - timedelta(days=1)
+    scans_yesterday = await db.scan_logs.count_documents({**match_query, "timestamp": {"$gte": yesterday_start, "$lt": today_start}})
+    
     growth = 0
     if scans_yesterday > 0: growth = round(((scans_today - scans_yesterday) / scans_yesterday) * 100, 1)
 

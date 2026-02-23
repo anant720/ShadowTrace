@@ -107,7 +107,7 @@ chrome.webRequest.onBeforeRequest.addListener(
             tabId: details.tabId,
             timestamp: Date.now(),
             requestBody: rawBody,
-            requestHeaders: [],
+            headers: [],
             responseHeaders: [],
             statusCode: 0
         };
@@ -121,7 +121,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     async (details) => {
         const req = await getFromBuffer(details.requestId);
         if (req) {
-            req.requestHeaders = details.requestHeaders || [];
+            req.headers = details.requestHeaders || [];
             await saveToBuffer(details.requestId, req);
         }
     },

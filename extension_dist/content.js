@@ -49,9 +49,8 @@
     });
 
     function triggerScan(delay = 1000) {
-        // Disabled auto-scanning
-        // clearTimeout(scanTimeout);
-        // scanTimeout = setTimeout(performScan, delay);
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(performScan, delay);
     }
 
     async function performScan() {
@@ -76,11 +75,15 @@
         }
     }
 
-    // React to page changes (Passive only, no auto-scan)
+    // React to page changes
     function setupObserver() {
-        // Automation disabled per user request
+        if (observer) observer.disconnect();
+        observer = new MutationObserver(() => triggerScan(1500));
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // Start: Dormant until clicked
-    console.log('[ShadowTrace] On-Demand mode active. Standing by...');
+    // Start: Proactive protection
+    triggerScan(500);
+    setupObserver();
+    console.log('[ShadowTrace] Real-time protection active.');
 })();

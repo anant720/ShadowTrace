@@ -19,9 +19,9 @@ const ST_CONFIG = Object.freeze({
 
   // Risk level thresholds (0-100 score)
   RISK_THRESHOLDS: Object.freeze({
-    LOW: 30,   // 0–30 = low risk
-    MEDIUM: 65,   // 31–65 = medium risk
-    // 66–100 = high risk
+    LOW: 30,      // 0–30 = Safe
+    MEDIUM: 65,   // 31–65 = Suspicious
+    // > 65 = Dangerous
   }),
 
   // Risk level labels
