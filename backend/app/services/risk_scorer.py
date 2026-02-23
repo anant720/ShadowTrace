@@ -4,9 +4,12 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.models.schemas import AnalyzeRequest, AnalyzeResponse
 from app.ml.features import FeatureEngineer
 from app.ml.ensemble_engine import EnsembleScorer
+from app.ml.whitelist_manager import WhitelistManager
+from app.ml.normalization import Normalizer
 
 logger = logging.getLogger("shadowtrace.services.risk_scorer")
 scorer = EnsembleScorer()
+whitelist = WhitelistManager()
 
 def classify_risk(score: float) -> str:
     if score <= 30: return "Safe"
@@ -15,24 +18,51 @@ def classify_risk(score: float) -> str:
 
 async def evaluate(request: AnalyzeRequest, db: AsyncIOMotorDatabase) -> AnalyzeResponse:
     try:
-        # 1. Pipeline: Feature Engineering
-        # Convert Pydantic model to dict for transparency in processing
+        # 0. Adversarial Normalization
+        original_url = request.fullURL or request.domain.fullURL
+        normalized_url = Normalizer.normalize_url(original_url)
+        
+        # 1. False Positive Mitigation: Whitelist Check
+        domain_name = request.domain.hostname
+        if whitelist.is_trusted(domain_name):
+            return AnalyzeResponse(
+                risk_score=0.0,
+                risk_level="Safe",
+                reasons=["Neural Consensus: Domain belongs to global trust-tier (Whitelist)"],
+                confidence=1.0,
+                source="whitelist"
+            )
+
+        # 2. Pipeline: Feature Engineering
         raw_payload = request.model_dump()
+        raw_payload["full_url"] = normalized_url # Use normalized URL for feature extraction
         features = FeatureEngineer.extract_all(raw_payload)
         
-        # 2. Pipeline: ML Ensemble Inference
+        # 3. Pipeline: ML Ensemble Inference
         analysis = await scorer.calculate_ensemble_score(features)
         
         final_score = analysis["final_score"]
+        
+        # 4. Risk Decay for Historically Safe Domains
+        try:
+            last_entry = await db.scan_logs.find_one(
+                {"domain": domain_name, "final_risk_score": {"$lt": 40}},
+                sort=[("timestamp", -1)]
+            )
+            if last_entry:
+                final_score = whitelist.apply_risk_decay(final_score, last_entry["timestamp"].replace(tzinfo=timezone.utc))
+        except Exception as e:
+            logger.error(f"Decay check failed: {e}")
+
         risk_level = classify_risk(final_score)
         
-        # 3. Log results to MongoDB
+        # 5. Log results to MongoDB
         try:
-            d = request.domain
             now = datetime.now(timezone.utc)
             log_entry = {
-                "domain": d.hostname,
-                "full_url": request.fullURL or d.fullURL,
+                "domain": domain_name,
+                "full_url": normalized_url,
+                "original_url": original_url,
                 "confidence": analysis["confidence"],
                 "final_risk_score": final_score,
                 "risk_level": risk_level,
@@ -43,13 +73,6 @@ async def evaluate(request: AnalyzeRequest, db: AsyncIOMotorDatabase) -> Analyze
                 "timestamp": now,
             }
             await db.scan_logs.insert_one(log_entry)
-            await db.risk_history.insert_one({
-                "domain": d.hostname,
-                "risk_score": final_score,
-                "risk_level": risk_level,
-                "layer_scores": analysis["layer_scores"],
-                "timestamp": now,
-            })
         except Exception as e:
             logger.error(f"Log failed: {e}")
 

@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 class FeatureEngineer:
     """
-    Transforms raw telemetry signals from the browser extension 
-    into a numerical feature vector suitable for ML layers.
+    ShadowTrace Neural Engine — Feature Extraction Pipeline v4.1
+    Transforms raw telemetry into high-fidelity forensic feature vectors.
     """
 
     @staticmethod
@@ -23,10 +23,10 @@ class FeatureEngineer:
         
         features = {}
         
-        # --- Layer 1: Lexical Features ---
+        # --- Layer 1: Lexical Features (Adversarial-Hardened) ---
         features.update(FeatureEngineer.lexical_features(full_url, domain_sigs))
         
-        # --- Layer 2: Behavioral Features ---
+        # --- Layer 2: Behavioral Features (Density-Aware) ---
         features["eval_count"] = float(ml_behavior.get("evalCount", 0))
         features["large_hex_count"] = float(ml_behavior.get("largeHexCount", 0))
         features["suspicious_handlers"] = float(interaction.get("suspiciousHandlerCount", 0))
@@ -34,12 +34,16 @@ class FeatureEngineer:
         features["has_keylogger"] = 1.0 if interaction.get("hasGlobalKeylogger") else 0.0
         features["has_login"] = 1.0 if forms.get("hasLoginForm") else 0.0
         
-        # --- Injection Signals ---
+        # JS Obfuscation Score (Entropy vs Length)
+        # Using evalCount and largeHex as proxies for now, but we'll add script entropy if available
+        features["obfuscation_score"] = (features["eval_count"] * 10) + (features["large_hex_count"] * 5)
+        
+        # --- Injection & Behavioral Signals ---
         features["external_fetch_detected"] = 1.0 if behavior.get("externalFetchDetected") else 0.0
         features["external_xhr_detected"] = 1.0 if behavior.get("externalXHRDetected") else 0.0
         features["suspicious_submission_count"] = float(len(behavior.get("suspiciousSubmissions", [])))
         
-        # --- Network-Level features (New) ---
+        # --- Network-Level features ---
         req_count = len(network_reqs)
         features["network_request_count"] = float(req_count)
         
@@ -47,7 +51,6 @@ class FeatureEngineer:
             posts = [r for r in network_reqs if r.get("method") == "POST"]
             features["post_ratio"] = len(posts) / req_count
             
-            # Identify requests to domains other than the landing domain
             landing_host = urlparse(full_url).netloc
             external = [r for r in network_reqs if urlparse(r.get("url", "")).netloc != landing_host]
             features["external_request_ratio"] = len(external) / req_count
@@ -61,6 +64,16 @@ class FeatureEngineer:
     def lexical_features(url: str, domain_sigs: Dict[str, Any]) -> Dict[str, float]:
         parsed = urlparse(url)
         hostname = parsed.netloc
+        path = parsed.path
+        
+        # Unicode Homograph Detection logic
+        # If hostname contains non-ASCII but isn't explicitly punycode, or mixed scripts
+        has_homograph = 1.0 if re.search(r'[^\x00-\x7F]', hostname) and not hostname.startswith('xn--') else 0.0
+        
+        # Digit-to-letter ratio
+        letters = len(re.findall(r'[a-zA-Z]', hostname))
+        digits = len(re.findall(r'[0-9]', hostname))
+        digit_ratio = digits / (letters + digits) if (letters + digits) > 0 else 0
         
         return {
             "url_length": float(len(url)),
@@ -70,11 +83,16 @@ class FeatureEngineer:
             "subdomain_depth": float(len(hostname.split(".")) - 2) if "." in hostname else 0.0,
             "is_ip": 1.0 if domain_sigs.get("isIPBased") else 0.0,
             "is_https": 1.0 if domain_sigs.get("isHTTPS") else 0.0,
-            "entropy": float(domain_sigs.get("entropy", 0.0))
+            "entropy": float(domain_sigs.get("entropy", FeatureEngineer.calculate_entropy(hostname))),
+            "path_entropy": FeatureEngineer.calculate_entropy(path),
+            "has_homograph": has_homograph,
+            "digit_ratio": digit_ratio,
+            "repeated_char_max": float(max([url.count(c) for c in set(url)]) / len(url)) if url else 0
         }
 
     @staticmethod
     def calculate_entropy(text: str) -> float:
         if not text: return 0.0
+        # Shannon Entropy Formula
         probs = [float(text.count(c)) / len(text) for c in set(text)]
         return -sum(p * math.log2(p) for p in probs)

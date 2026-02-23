@@ -135,6 +135,7 @@ class AnalyzeResponse(BaseModel):
     confidence: float = 1.0
     engine_scores: Optional[dict] = None
     explainability: Optional[dict] = None
+    source: Optional[str] = None
 
 
 class ReportResponse(BaseModel):
