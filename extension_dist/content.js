@@ -25,10 +25,8 @@
 
         if (p.kind === 'external_fetch') {
             behavior.externalFetchDetected = true;
-            triggerScan(1000);
         } else if (p.kind === 'external_xhr') {
             behavior.externalXHRDetected = true;
-            triggerScan(1000);
         } else if (p.kind === 'credential_bearing_request') {
             console.warn('[ShadowTrace] Suspicious submission detected');
             behavior.suspiciousSubmissions.push({
@@ -37,55 +35,52 @@
                 method: p.method,
                 timestamp: p.timestamp
             });
-            triggerScan(0);
+        }
+    });
+
+    // Listen for manual scan trigger from popup
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+        if (msg.type === 'ST_MANUAL_SCAN') {
+            console.log('[ShadowTrace] Manual scan triggered');
+            inject(); // Inject core only when user asks
+            performScan().then(() => sendResponse({ status: 'ok' }));
+            return true;
         }
     });
 
     function triggerScan(delay = 1000) {
-        clearTimeout(scanTimeout);
-        scanTimeout = setTimeout(performScan, delay);
+        // Disabled auto-scanning
+        // clearTimeout(scanTimeout);
+        // scanTimeout = setTimeout(performScan, delay);
     }
 
     async function performScan() {
         try {
             if (typeof STSignals === 'undefined') {
-                console.error('[ShadowTrace] Signal engine missing');
-                return;
+                console.warn('[ShadowTrace] Signal engine loading...');
+                // Briefly wait if just injected
+                await new Promise(r => setTimeout(r, 100));
             }
 
             const domain = STSignals.extractDomainSignals(window.location.href);
             const forms = STSignals.scanForLoginForms();
 
-            console.log(`[ShadowTrace] Scanning ${domain.hostname}...`);
+            console.log(`[ShadowTrace] Manual scan: ${domain.hostname}...`);
 
             chrome.runtime.sendMessage({
                 type: 'ST_SIGNAL_REPORT',
                 payload: STSignals.buildPayload(domain, forms, behavior)
-            }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('[ShadowTrace] Comm error:', chrome.runtime.lastError.message);
-                }
             });
         } catch (err) {
             console.error('[ShadowTrace] Scan error:', err);
         }
     }
 
-    // React to page changes (SPAs, dynamic forms)
+    // React to page changes (Passive only, no auto-scan)
     function setupObserver() {
-        if (observer) observer.disconnect();
-        observer = new MutationObserver((mutations) => {
-            const significant = mutations.some(m => m.addedNodes.length > 0);
-            if (significant) triggerScan(1500); // Wait for content to settle
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+        // Automation disabled per user request
     }
 
-    // Start
-    inject();
-    triggerScan(1000); // Initial scan
-
-    if (document.body) setupObserver();
-    else document.addEventListener('DOMContentLoaded', setupObserver);
-
+    // Start: Dormant until clicked
+    console.log('[ShadowTrace] On-Demand mode active. Standing by...');
 })();

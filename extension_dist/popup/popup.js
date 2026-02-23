@@ -22,6 +22,7 @@
         statusText: $('statusText'),
         networkList: $('networkList'),
         openMonitor: $('openMonitor'),
+        scanButton: $('scanButton'),
     };
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -36,29 +37,41 @@
             return;
         }
 
-        // ── Phase 1: Instant Local Display ──────────────────────────
-        setScanning(tab);
+        // ── Phase 1: Ready State ──────────────────────────
+        setReady(tab);
 
         // ── Phase 2: Check Session for Result ───────────────────────
         chrome.runtime.sendMessage(
             { type: 'ST_GET_RISK', tabId: tab.id },
             async (data) => {
-                if (chrome.runtime.lastError) {
-                    setError('Extension sync error');
-                    return;
-                }
-
-                if (!data) {
-                    // Send a warm-up ping to backend via background to minimize cold-start
-                    chrome.runtime.sendMessage({ type: 'ST_WARM_UP' });
-                } else {
+                if (data) {
                     renderRiskData(data);
                 }
-
-                // Start polling network requests separately for real-time feel
                 startNetworkPoller(tab.id);
             }
         );
+    }
+
+    async function handleManualScan() {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) return;
+
+        setScanning(tab);
+
+        // Trigger content script scan
+        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Scan trigger failed:', chrome.runtime.lastError);
+                setError('Page not ready for scanning. Try refreshing.');
+            } else {
+                // Poll for results
+                setTimeout(() => {
+                    chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: tab.id }, (data) => {
+                        if (data) renderRiskData(data);
+                    });
+                }, 1500);
+            }
+        });
     }
 
     function startNetworkPoller(tabId) {
@@ -173,23 +186,33 @@
         els.networkList.innerHTML = html;
     }
 
-    // ── Scanning State ──────────────────────────────────────────────
-    function setScanning(tab) {
+    // ── Ready State ───────────────────────────────────────────────
+    function setReady(tab) {
         const container = document.querySelector('.st-container');
-        container.setAttribute('data-state', 'scanning');
+        container.removeAttribute('data-state');
         try {
             const url = new URL(tab.url);
             els.hostname.textContent = url.hostname;
             els.protocol.textContent = url.protocol.replace(':', '').toUpperCase();
             els.protocol.className = `st-protocol ${url.protocol === 'https:' ? 'secure' : 'insecure'}`;
         } catch {
-            els.hostname.textContent = 'Unknown page';
+            els.hostname.textContent = 'Welcome to ShadowTrace';
         }
 
+        els.levelBadge.textContent = 'READY TO SCAN';
+        els.statusText.textContent = 'Click below to analyze this page';
+    }
+
+    // ── Scanning State ──────────────────────────────────────────────
+    function setScanning(tab) {
+        const container = document.querySelector('.st-container');
+        container.setAttribute('data-state', 'scanning');
+
         els.scoreNumber.textContent = '—';
-        els.levelBadge.textContent = 'SCANNING';
+        els.scoreLabel.textContent = 'ANALYZING';
+        els.levelBadge.textContent = 'NEURAL SCAN ACTIVE';
         els.statusDot.className = 'st-status-dot';
-        els.statusText.textContent = 'Waiting for analysis...';
+        els.statusText.textContent = 'Performing forensic analysis...';
     }
 
     // ── Error State ─────────────────────────────────────────────────
@@ -224,6 +247,10 @@
             const url = chrome.runtime.getURL(`monitor/monitor.html?tabId=${tab?.id}`);
             chrome.tabs.create({ url });
         });
+    }
+
+    if (els.scanButton) {
+        els.scanButton.addEventListener('click', handleManualScan);
     }
 
     // Run
