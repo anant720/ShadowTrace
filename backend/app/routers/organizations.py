@@ -27,7 +27,12 @@ async def list_my_orgs(
     List all organizations the current user is a member of.
     """
     user_email = user.get("email")
-    user_record = await db.admin_users.find_one({"email": user_email})
+    username = user.get("sub")
+    user_record = None
+    if user_email:
+        user_record = await db.admin_users.find_one({"email": user_email})
+    if not user_record and username:
+        user_record = await db.admin_users.find_one({"username": username})
     
     if not user_record:
         return []
@@ -89,8 +94,9 @@ async def invite_member(
     from datetime import timedelta
     
     token = secrets.token_urlsafe(32)
+    invite_email = request.email.strip().lower()
     invitation = {
-        "email": request.email,
+        "email": invite_email,
         "role": request.role,
         "org_id": org_id,
         "token": token,
@@ -107,10 +113,10 @@ async def invite_member(
     # Generate (or rotate) extension member key for this invitee
     member_key = "st_mk_" + secrets.token_urlsafe(32)
     await db.member_keys.update_one(
-        {"org_id": org_id, "email": request.email},
+        {"org_id": org_id, "email": invite_email},
         {"$set": {
             "org_id": org_id,
-            "email": request.email,
+            "email": invite_email,
             "key": member_key,
             "created_at": datetime.now(timezone.utc),
             "active": True
@@ -120,7 +126,7 @@ async def invite_member(
 
     # Store member_key on the invitation record too (manual onboarding / debugging)
     await db.invitations.update_one(
-        {"org_id": org_id, "email": request.email},
+        {"org_id": org_id, "email": invite_email},
         {"$set": {"member_key": member_key}},
     )
 
@@ -155,18 +161,18 @@ async def invite_member(
 
     try:
         send_email(
-            to_email=request.email,
+            to_email=invite_email,
             subject=subject,
             text=text,
             html=html,
         )
         await db.invitations.update_one(
-            {"org_id": org_id, "email": request.email},
+            {"org_id": org_id, "email": invite_email},
             {"$set": {"email_status": "SENT", "sent_at": datetime.now(timezone.utc)}},
         )
     except MailerError as e:
         await db.invitations.update_one(
-            {"org_id": org_id, "email": request.email},
+            {"org_id": org_id, "email": invite_email},
             {"$set": {"email_status": "FAILED", "email_error": str(e)}},
         )
         raise HTTPException(
@@ -268,9 +274,10 @@ async def list_members(
     primary_users = await db.admin_users.find({"org_id": org_id}).to_list(length=500)
     members = []
     for u in primary_users:
+        email = u.get("email") or f"{u.get('username','user')}@shadowtrace.local"
         members.append({
             "user_id": str(u["_id"]),
-            "email": u["email"],
+            "email": email,
             "role": u.get("role", "member"),
             "joined_at": u.get("created_at", datetime.now(timezone.utc))
         })
@@ -280,9 +287,10 @@ async def list_members(
     for m in secondary_memberships:
         u = await db.admin_users.find_one({"_id": ObjectId(m["user_id"])})
         if u:
+             email = u.get("email") or f"{u.get('username','user')}@shadowtrace.local"
              members.append({
                 "user_id": str(u["_id"]),
-                "email": u["email"],
+                "email": email,
                 "role": m.get("role", "member"),
                 "joined_at": m.get("created_at", datetime.now(timezone.utc))
             })
@@ -353,6 +361,7 @@ async def generate_member_key(
 @router.get("/activate/{key}", summary="Validate a member key (called by extension)")
 async def activate_member_key(
     key: str,
+    email: str | None = None,
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
@@ -363,6 +372,26 @@ async def activate_member_key(
     record = await db.member_keys.find_one({"key": key, "active": True})
     if not record:
         raise HTTPException(status_code=404, detail="Invalid or revoked member key")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="email is required for activation")
+
+    provided = email.strip().lower()
+    expected = (record.get("email") or "").strip().lower()
+    if not expected:
+        raise HTTPException(status_code=401, detail="Member key is not bound to an email")
+    if provided != expected:
+        raise HTTPException(status_code=401, detail="Member key is not valid for this email")
+
+    # Must have a non-expired invitation matching (org_id, email, member_key)
+    invite = await db.invitations.find_one(
+        {"org_id": record["org_id"], "email": expected, "member_key": key}
+    )
+    if not invite:
+        raise HTTPException(status_code=401, detail="No valid invitation found for this key/email")
+    exp = invite.get("expires_at")
+    if exp and isinstance(exp, datetime) and exp.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Invitation expired")
 
     # Fetch org name for display
     try:

@@ -222,6 +222,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Popup is asking us to validate + store an org member key
         const key = message.key;
         getUserEmail().then((email) => {
+            if (!email || email.includes('anonymous') || email.includes('shadowtrace.local')) {
+                sendResponse({ success: false, error: 'Please sign into Chrome with the invited Gmail first.' });
+                return;
+            }
             const url = `${CONFIG.ACTIVATE_ENDPOINT}/${key}?email=${encodeURIComponent(email)}`;
             fetch(url)
                 .then(r => r.json())
@@ -562,11 +566,9 @@ async function sendToBackend(data, retry = 0) {
 
         if (memberKey) {
             headers['X-Member-Key'] = memberKey;
-            // Bind key usage to the signed-in browser identity (best-effort)
-            try {
-                const email = await getUserEmail();
-                if (email) headers['X-User-Email'] = email;
-            } catch (e) { /* ignore */ }
+            // Mandatory binding: send the signed-in Chrome email
+            const email = await getUserEmail();
+            headers['X-User-Email'] = email || '';
         } else {
             // Priority 2: Google OAuth (silent — no popup)
             const token = await getAuthToken(false);

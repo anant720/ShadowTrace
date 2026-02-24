@@ -16,6 +16,7 @@ async def get_summary(
 ):
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     match_query = {"org_id": org_id}
     if domain:
@@ -23,6 +24,7 @@ async def get_summary(
 
     total_scans = await db.scan_logs.count_documents(match_query)
     scans_today = await db.scan_logs.count_documents({**match_query, "timestamp": {"$gte": today_start}})
+    scans_this_month = await db.scan_logs.count_documents({**match_query, "timestamp": {"$gte": month_start}})
 
     risk_dist = {}
     pipeline_risk = [
@@ -42,6 +44,7 @@ async def get_summary(
     return {
         "total_scans": total_scans,
         "scans_today": scans_today,
+        "scans_this_month": scans_this_month,
         "growth_rate": growth,
         "risk_distribution": risk_dist,
         "total_reports": await db.reports.count_documents(base),

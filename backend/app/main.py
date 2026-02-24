@@ -299,6 +299,7 @@ async def lifespan(app: FastAPI):
     if not admin_user:
         await db.admin_users.insert_one({
             "username": settings.ADMIN_USERNAME,
+            "email": f"{settings.ADMIN_USERNAME}@shadowtrace.local",
             "password_hash": pwd_ctx.hash(settings.ADMIN_PASSWORD),
             "role": "admin",
             "org_id": default_org_id,
@@ -313,6 +314,13 @@ async def lifespan(app: FastAPI):
                 {"$set": {"org_id": default_org_id}},
             )
             logger.info(f"Admin user '{settings.ADMIN_USERNAME}' bound to default org {default_org_id}")
+        # Ensure admin has an email for org/membership APIs + UI
+        if not admin_user.get("email"):
+            await db.admin_users.update_one(
+                {"_id": admin_user["_id"]},
+                {"$set": {"email": f"{settings.ADMIN_USERNAME}@shadowtrace.local"}},
+            )
+            logger.info(f"Admin user '{settings.ADMIN_USERNAME}' backfilled email")
 
     # Start background tasks (anomaly detection, etc.)
     from app.services.background_tasks import start_background_tasks, stop_background_tasks

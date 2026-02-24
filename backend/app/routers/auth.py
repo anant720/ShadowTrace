@@ -22,8 +22,10 @@ async def login(request: LoginRequest, db = Depends(get_database)):
     org_id = user.get("org_id")
     if not org_id:
         raise HTTPException(status_code=403, detail="Account is not assigned to an organization. Contact your administrator.")
+    email = user.get("email") or f"{user.get('username','user')}@shadowtrace.local"
     token = create_access_token({
         "sub": user["username"],
+        "email": email,
         "role": user["role"],
         "org_id": org_id
     })
@@ -33,6 +35,7 @@ async def login(request: LoginRequest, db = Depends(get_database)):
         "token_type": "bearer",
         "role": user["role"],
         "username": user["username"],
+        "email": email,
         "org_id": org_id
     }
 
