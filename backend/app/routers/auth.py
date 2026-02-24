@@ -19,10 +19,25 @@ async def login(request: LoginRequest, db = Depends(get_database)):
     if not user or not pwd_context.verify(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": user["username"], "role": user["role"]})
+    org_id = user.get("org_id", "community")
+    token = create_access_token({
+        "sub": user["username"], 
+        "role": user["role"],
+        "org_id": org_id
+    })
     await db.admin_users.update_one({"_id": user["_id"]}, {"$set": {"last_login": datetime.now(timezone.utc)}})
-    return {"access_token": token, "token_type": "bearer", "role": user["role"], "username": user["username"]}
+    return {
+        "access_token": token, 
+        "token_type": "bearer", 
+        "role": user["role"], 
+        "username": user["username"],
+        "org_id": org_id
+    }
 
 @router.get("/me")
 async def get_me(current_user: dict = Depends(get_current_admin)):
-    return {"username": current_user.get("sub"), "role": current_user.get("role")}
+    return {
+        "username": current_user.get("sub"), 
+        "role": current_user.get("role"),
+        "org_id": current_user.get("org_id", "community")
+    }

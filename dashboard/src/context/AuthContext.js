@@ -14,25 +14,35 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('st_token');
         const role = localStorage.getItem('st_role');
         const username = localStorage.getItem('st_user');
+        const org_id = localStorage.getItem('st_org');
 
         if (token && role && username) {
-            setUser({ token, role, username });
+            setUser({ token, role, username, org_id: org_id || 'community' });
         }
         setLoading(false);
     }, []);
 
-    const login = (token, role, username) => {
+    const login = (token, role, username, org_id) => {
         localStorage.setItem('st_token', token);
         localStorage.setItem('st_role', role);
         localStorage.setItem('st_user', username);
-        setUser({ token, role, username });
+        localStorage.setItem('st_org', org_id || 'community');
+        setUser({ token, role, username, org_id: org_id || 'community' });
         router.push('/');
+    };
+
+    const switchOrganization = (org_id) => {
+        localStorage.setItem('st_org', org_id);
+        setUser(prev => ({ ...prev, org_id }));
+        // Reload to refresh all scoped data
+        window.location.reload();
     };
 
     const logout = () => {
         localStorage.removeItem('st_token');
         localStorage.removeItem('st_role');
         localStorage.removeItem('st_user');
+        localStorage.removeItem('st_org');
         setUser(null);
         router.push('/login');
     };

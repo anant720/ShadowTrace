@@ -18,7 +18,7 @@ export default function LoginPage() {
 
         try {
             const data = await apiRequest('/auth/login', 'POST', { username, password });
-            login(data.access_token, data.role, data.username);
+            login(data.access_token, data.role, data.username, data.org_id);
         } catch (err) {
             setError(err.message);
         } finally {

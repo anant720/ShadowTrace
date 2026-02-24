@@ -23,6 +23,7 @@
         networkList: $('networkList'),
         openMonitor: $('openMonitor'),
         scanButton: $('scanButton'),
+        protectionToggle: $('protectionToggle'),
     };
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -40,7 +41,9 @@
         // ── Phase 1: Ready State ──────────────────────────
         setReady(tab);
 
-        // ── Phase 2: Check Session for Result ───────────────────────
+        // ── Phase 2: Check Permissions & Session ───────────
+        await updateProtectionState();
+
         chrome.runtime.sendMessage(
             { type: 'ST_GET_RISK', tabId: tab.id },
             async (data) => {
@@ -52,26 +55,78 @@
         );
     }
 
+    async function updateProtectionState() {
+        const hasPermission = await chrome.permissions.contains({
+            origins: ['<all_urls>']
+        });
+        els.protectionToggle.checked = hasPermission;
+    }
+
+    async function handleProtectionToggle() {
+        const enabled = els.protectionToggle.checked;
+        if (enabled) {
+            const granted = await chrome.permissions.request({
+                origins: ['<all_urls>']
+            });
+            if (!granted) {
+                els.protectionToggle.checked = false;
+            }
+        } else {
+            const removed = await chrome.permissions.remove({
+                origins: ['<all_urls>']
+            });
+            if (!removed) {
+                // If removal fails (rare), sync UI back
+                await updateProtectionState();
+            }
+        }
+    }
+
     async function handleManualScan() {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) return;
 
         setScanning(tab);
 
-        // Trigger content script scan
-        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, (response) => {
+        // Attempt to message existing script
+        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, async (response) => {
             if (chrome.runtime.lastError) {
-                console.error('Scan trigger failed:', chrome.runtime.lastError);
-                setError('Page not ready for scanning. Try refreshing.');
-            } else {
-                // Poll for results
-                setTimeout(() => {
-                    chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: tab.id }, (data) => {
-                        if (data) renderRiskData(data);
+                console.log('Content script not found, injecting on-demand...');
+
+                try {
+                    // Inject dependencies first, then content script
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['utils/constants.js', 'utils/signals.js', 'content.js']
                     });
-                }, 1500);
+
+                    // Wait a moment for script to initialize its listeners
+                    setTimeout(() => {
+                        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, (resp) => {
+                            if (chrome.runtime.lastError) {
+                                setError('Failed to initialize scan engine.');
+                            } else {
+                                pollForResult(tab.id);
+                            }
+                        });
+                    }, 200);
+                } catch (err) {
+                    console.error('Injection failed:', err);
+                    setError('Refused to scan this page (Restricted site).');
+                }
+            } else {
+                pollForResult(tab.id);
             }
         });
+    }
+
+    function pollForResult(tabId) {
+        // Poll for results
+        setTimeout(() => {
+            chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: tabId }, (data) => {
+                if (data) renderRiskData(data);
+            });
+        }, 1500);
     }
 
     function startNetworkPoller(tabId) {
@@ -251,6 +306,10 @@
 
     if (els.scanButton) {
         els.scanButton.addEventListener('click', handleManualScan);
+    }
+
+    if (els.protectionToggle) {
+        els.protectionToggle.addEventListener('change', handleProtectionToggle);
     }
 
     // Run

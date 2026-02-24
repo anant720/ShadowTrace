@@ -11,6 +11,11 @@ export const apiRequest = async (endpoint, method = 'GET', body = null) => {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
+    const orgId = typeof window !== 'undefined' ? localStorage.getItem('st_org') : null;
+    if (orgId && orgId !== 'community') {
+        headers['X-Org-ID'] = orgId;
+    }
+
     const options = {
         method,
         headers,

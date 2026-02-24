@@ -5,10 +5,72 @@ Input validation and response serialization models.
 All external data passes through these schemas.
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator, EmailStr
+from typing import Any, List, Optional
 from datetime import datetime
 import re
+
+
+# ── Multi-Tenancy Models ─────────────────────────────────────────────
+
+class Organization(BaseModel):
+    id: str = Field(..., alias="_id")
+    name: str = Field(..., min_length=1, max_length=100)
+    slug: str = Field(..., min_length=1, max_length=50) # e.g. "acme-corp"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    subscription_tier: str = "community" # community, pro, enterprise, guardian
+    white_label_enabled: bool = False
+
+class UsageStats(BaseModel):
+    scans_this_month: int = 0
+    quota_limit: int = 100
+    members_count: int = 1
+    members_limit: int = 1
+
+class SubscriptionInfo(BaseModel):
+    tier: str
+    limits: dict
+    usage: UsageStats
+
+class OrganizationCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    slug: str = Field(..., min_length=1, max_length=50)
+    subscription_tier: str = "community"
+
+class OrganizationResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    subscription_tier: str
+    created_at: datetime
+    subscription: Optional[SubscriptionInfo] = None
+
+class User(BaseModel):
+    id: str = Field(..., alias="_id")
+    email: EmailStr
+    username: str
+    org_id: str
+    role: str = "member" # admin, member
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Member(BaseModel):
+    user_id: str
+    email: EmailStr
+    role: str
+    joined_at: datetime
+
+class InvitationCreate(BaseModel):
+    email: EmailStr
+    role: str = "member"
+
+class InvitationResponse(BaseModel):
+    id: str
+    email: EmailStr
+    role: str
+    org_id: str
+    created_at: datetime
+    expires_at: datetime
+
 
 
 # ── Request Models ───────────────────────────────────────────────────
@@ -94,6 +156,7 @@ class AnalyzeRequest(BaseModel):
     traps: Optional[TrapSignals] = Field(default_factory=TrapSignals)
     network_requests: Optional[List[NetworkRequest]] = Field(default_factory=list)
     meta: Optional[MetaInfo] = None
+    org_id: Optional[str] = Field(None, description="Organization context for the scan")
 
     class Config:
         # Limit total request size via max content length in middleware
@@ -128,6 +191,7 @@ class CorrectionRequest(BaseModel):
     domain: str
     actual_risk: str  # Safe / Dangerous
     analyst_notes: Optional[str] = None
+    org_id: Optional[str] = None
 
 
 # ── Response Models ──────────────────────────────────────────────────
@@ -142,11 +206,70 @@ class AnalyzeResponse(BaseModel):
     security_score: Optional[float] = None
     security_findings: Optional[List[dict]] = Field(default_factory=list)
     source: Optional[str] = None
+    intelligence_policy: Optional[dict] = None
 
 
 class ReportResponse(BaseModel):
     status: str
     message: str
+
+class FleetPolicy(BaseModel):
+    org_id: str
+    blocked_domains: List[str] = Field(default_factory=list)
+    restricted_keywords: List[str] = Field(default_factory=list)
+    dlp_rules: List[dict] = Field(default_factory=list) # e.g. {"pattern": "regex", "action": "block"}
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PolicyUpdate(BaseModel):
+    blocked_domains: Optional[List[str]] = None
+    restricted_keywords: Optional[List[str]] = None
+    dlp_rules: Optional[List[dict]] = None
+
+class HeartbeatRequest(BaseModel):
+    user_id: str
+    extension_version: str
+    tab_count: int
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class ForensicHeader(BaseModel):
+    version: str
+    seq: int
+    nonce: str
+    timestamp: datetime
+    installation_id: str
+    id_tier: Optional[str] = "derived"   # enterprise_tpm | platform_keychain | derived
+    prev_hash: str = "GENESIS"            # SHA-256 of previous envelope; "GENESIS" for seq==1
+    genesis: bool = False                 # True only when seq == 1 and no prior chain exists
+    hmac: str
+
+
+class AnalyzeEnvelope(BaseModel):
+    header: ForensicHeader
+    payload: dict  # Raw dict — validated as AnalyzeRequest downstream
+
+
+class NonceRecord(BaseModel):
+    nonce: str
+    installation_id: str
+    received_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
+
+
+class ChainRecord(BaseModel):
+    installation_id: str
+    org_id: str
+    seq: int
+    nonce: str
+    timestamp: datetime
+    envelope_hash: str    # SHA-256(canonical_bytes ‖ hmac) — used as NEXT prev_hash
+    stored_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class IntegrityCheckResult(BaseModel):
+    valid: bool
+    violation_type: Optional[str] = None  # REPLAY | HMAC_MISMATCH | CHAIN_BROKEN | GAP_DETECTED | GENESIS_MISMATCH
+    seq_gap: Optional[int] = None
+
 
 
 class StatsResponse(BaseModel):

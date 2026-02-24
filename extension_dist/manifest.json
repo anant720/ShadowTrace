@@ -1,19 +1,25 @@
 {
     "manifest_version": 3,
     "name": "ShadowTrace: AI Phishing Protection",
-    "version": "1.1.0",
-    "description": "Enterpise-grade AI engine that detects phishing, credential exfiltration, and adversarial URL attacks in real-time.",
+    "version": "1.2.0",
+    "description": "Enterprise-grade AI engine that detects phishing, credential exfiltration, and adversarial URL attacks in real-time.",
     "permissions": [
         "activeTab",
         "storage",
         "scripting",
         "identity",
         "webRequest",
-        "webRequestExtraHeaders"
+        "webRequestExtraHeaders",
+        "offscreen"
     ],
-    "host_permissions": [
+    "optional_permissions": [
+        "enterprise.platformKeys",
+        "platformKeys"
+    ],
+    "optional_host_permissions": [
         "<all_urls>"
     ],
+    "host_permissions": [],
     "background": {
         "service_worker": "background.js"
     },
@@ -41,7 +47,10 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "inject.js"
+                "inject.js",
+                "utils/canonicalize.js",
+                "offscreen/signer.html",
+                "offscreen/signer.js"
             ],
             "matches": [
                 "<all_urls>"

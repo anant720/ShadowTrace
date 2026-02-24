@@ -7,7 +7,7 @@ import logging
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.dependencies import get_database, verify_api_key
+from app.dependencies import get_database, verify_api_key, get_current_org_id
 from app.models.schemas import AnalyzeRequest, AnalyzeResponse
 from app.services import risk_scorer
 
@@ -16,9 +16,14 @@ router = APIRouter(tags=["Analysis"])
 
 
 @router.post("/analyze", response_model=AnalyzeResponse, summary="Analyze page signals for phishing risk")
-async def analyze_page(
-    request: AnalyzeRequest,
-    db: AsyncIOMotorDatabase = Depends(get_database),
+async def analyze_url(
+    request_data: dict,
+    db: AsyncIOMotorDatabase = Depends(get_database), # Assuming get_database is the correct dependency name
+    # ... other deps
+    org_id: str = Depends(get_current_org_id),
 ) -> AnalyzeResponse:
-    logger.info(f"Analyzing domain: {request.domain.hostname}")
-    return await risk_scorer.evaluate(request, db)
+    # Pass raw dict to evaluate for envelope parsing
+    domain_hostname = request_data.get("domain", {}).get("hostname")
+    logger.info(f"Analyzing domain: {domain_hostname} for Org: {org_id}")
+    result = await risk_scorer.evaluate(request_data, db, org_id)
+    return result

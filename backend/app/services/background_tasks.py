@@ -3,6 +3,7 @@ import logging
 from app.config import settings
 from app.ml.anomaly_detector import AnomalyDetector
 from app.ml.trainer import EnterpriseTrainer
+from app.services.retention_service import retention_scheduler
 
 logger = logging.getLogger("shadowtrace.services.background_tasks")
 _tasks = []
@@ -57,6 +58,7 @@ def start_background_tasks(db):
     global _tasks
     _tasks.append(asyncio.create_task(anomaly_detection_loop(db)))
     _tasks.append(asyncio.create_task(continuous_learning_loop(db)))
+    _tasks.append(asyncio.create_task(retention_scheduler(db)))
 
 async def stop_background_tasks():
     global _tasks

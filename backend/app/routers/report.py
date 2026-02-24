@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.dependencies import get_database, verify_api_key, require_analyst
+from app.dependencies import get_database, verify_api_key, require_analyst, get_current_org_id
 from app.models.schemas import ReportRequest, ReportResponse, CorrectionRequest
 
 logger = logging.getLogger("shadowtrace.routers.report")
@@ -18,9 +18,10 @@ router = APIRouter(tags=["Reporting"])
 @router.get("/report", summary="Get all user-submitted reports")
 async def get_reports(
     db: AsyncIOMotorDatabase = Depends(get_database),
+    org_id: str = Depends(get_current_org_id),
     _user: dict = Depends(require_analyst)
 ):
-    cursor = db.reports.find().sort("timestamp", -1).limit(50)
+    cursor = db.reports.find({"org_id": org_id}).sort("timestamp", -1).limit(50)
     results = []
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])
@@ -34,47 +35,57 @@ async def get_reports(
 async def report_domain(
     request: ReportRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    org_id: str = Depends(get_current_org_id),
     _api_key: str = Depends(verify_api_key),
 ) -> ReportResponse:
-    logger.info(f"Received report for domain: {request.domain}")
+    logger.info(f"Received report for domain: {request.domain} in Org: {org_id}")
     await db.reports.insert_one({
+        "org_id": org_id,
         "domain": request.domain,
         "reason": request.reason,
         "timestamp": datetime.now(timezone.utc),
     })
 
-    # Count reports
-    report_count = await db.reports.count_documents({"domain": request.domain})
+    # Count reports in this Org
+    report_count = await db.reports.count_documents({
+        "org_id": org_id,
+        "domain": request.domain
+    })
 
-    # Auto-promote after 3 reports
+    # Auto-promote after 3 reports (scoped to Org)
     if report_count >= 3:
-        existing = await db.malicious_domains.find_one({"domain": request.domain})
+        existing = await db.malicious_domains.find_one({
+            "org_id": org_id,
+            "domain": request.domain
+        })
         if not existing:
             await db.malicious_domains.insert_one({
+                "org_id": org_id,
                 "domain": request.domain,
                 "source": "user_reports",
                 "threat_level": "medium",
                 "detected_at": datetime.now(timezone.utc),
             })
-            logger.info(f"Domain {request.domain} promoted to malicious_domains")
+            logger.info(f"Domain {request.domain} promoted to malicious_domains in Org: {org_id}")
             return ReportResponse(
                 status="reported",
-                message=f"Domain reported and flagged as malicious ({report_count} reports total)",
+                message=f"Domain reported and flagged as malicious ({report_count} reports total in your Org)",
             )
 
     return ReportResponse(
         status="reported",
-        message=f"Report logged successfully ({report_count} report(s) for this domain)",
+        message=f"Report logged successfully ({report_count} report(s) for this domain in your Org)",
     )
 
 @router.post("/correction", summary="Analyst correction (Ground Truth)")
 async def submit_correction(
     request: CorrectionRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    org_id: str = Depends(get_current_org_id),
     _user: dict = Depends(require_analyst)
 ):
     await db.ground_truth.update_one(
-        {"domain": request.domain},
+        {"org_id": org_id, "domain": request.domain},
         {"$set": {
             "label": request.actual_risk,
             "analyst": _user.get("email"),

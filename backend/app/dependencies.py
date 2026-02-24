@@ -1,4 +1,4 @@
-from fastapi import Header, HTTPException, status, Depends
+from fastapi import Header, HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.database import get_db
@@ -9,6 +9,10 @@ security = HTTPBearer()
 
 async def get_database() -> AsyncIOMotorDatabase:
     return get_db()
+
+async def get_current_org_id(request: Request) -> str:
+    org_id = getattr(request.state, "org_id", "community")
+    return org_id
 
 async def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")) -> str:
     if x_api_key != settings.API_KEY:

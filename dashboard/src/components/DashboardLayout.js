@@ -1,12 +1,15 @@
 "use client";
-
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
 import Link from 'next/link';
+import { apiRequest } from '@/utils/api';
+
 
 export default function DashboardLayout({ children }) {
-    const { user, loading, logout } = useAuth();
+    const [organizations, setOrganizations] = useState([]);
+    const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
+    const { user, loading, logout, switchOrganization } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -15,6 +18,21 @@ export default function DashboardLayout({ children }) {
             router.push('/login');
         }
     }, [user, loading, pathname, router]);
+
+    useEffect(() => {
+        const fetchOrgs = async () => {
+            try {
+                const data = await apiRequest('/organizations/');
+                setOrganizations(data);
+            } catch (err) {
+                console.error("Failed to fetch organizations", err);
+            }
+        };
+        if (user) fetchOrgs();
+    }, [user]);
+
+    // Filtered Org context UI
+    const currentOrg = organizations.find(o => o.id === user?.org_id) || { name: 'Community', id: 'community' };
 
     if (loading || (!user && pathname !== '/login')) {
         return <div style={{ background: 'var(--bg-main)', height: '100vh' }} />;
@@ -101,6 +119,12 @@ export default function DashboardLayout({ children }) {
                     <SideMenuItem href="/audit" svg={
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>
                     } label="Audit Log" />
+                    <SideMenuItem href="/intelligence" svg={
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+                    } label="ShadowFeed" />
+                    <SideMenuItem href="/settings" svg={
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                    } label="Settings" />
                 </nav>
                 <button onClick={logout} style={{
                     width: '48px',
@@ -169,6 +193,75 @@ export default function DashboardLayout({ children }) {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <h1 style={{ fontWeight: 800, fontSize: 'clamp(20px, 4vw, 32px)', letterSpacing: '-1.5px', color: 'var(--text-main)' }}>ShadowTrace</h1>
+                        <div style={{ position: 'relative' }}>
+                            <div
+                                onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
+                                style={{
+                                    background: 'var(--bg-hover)',
+                                    padding: '6px 16px',
+                                    borderRadius: '16px',
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    color: 'var(--text-main)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    border: '1px solid rgba(0,0,0,0.08)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                onMouseOut={(e) => e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+                                {currentOrg.name.toUpperCase()}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 9l6 6 6-6" /></svg>
+                            </div>
+
+                            {isOrgMenuOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 12px)',
+                                    left: 0,
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '20px',
+                                    boxShadow: 'var(--shadow-lg)',
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    padding: '12px',
+                                    minWidth: '240px',
+                                    zIndex: 1000,
+                                    animation: 'slideUp 0.3s ease'
+                                }}>
+                                    <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', padding: '0 8px' }}>Switch Organization</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        {organizations.map(org => (
+                                            <div
+                                                key={org.id}
+                                                onClick={() => switchOrganization(org.id)}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '14px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    color: org.id === user?.org_id ? 'var(--primary)' : 'var(--text-main)',
+                                                    background: org.id === user?.org_id ? 'rgba(0, 184, 148, 0.05)' : 'transparent',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                                onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseOut={(e) => e.currentTarget.style.background = org.id === user?.org_id ? 'rgba(0, 184, 148, 0.05)' : 'transparent'}
+                                            >
+                                                {org.name}
+                                                {org.id === user?.org_id && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div style={{
@@ -183,7 +276,8 @@ export default function DashboardLayout({ children }) {
                         <TabButton href="/" label="Overview" />
                         <TabButton href="/analytics" label="Security" />
                         <TabButton href="/audit" label="Forensics" />
-                        <TabButton href="/reports" label="Signals" />
+                        <TabButton href="/intelligence" label="ShadowFeed" />
+                        <TabButton href="/upgrade" label="💎 Upgrade" />
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

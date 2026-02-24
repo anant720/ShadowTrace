@@ -288,6 +288,23 @@ async def lifespan(app: FastAPI):
     from app.services.background_tasks import start_background_tasks, stop_background_tasks
     start_background_tasks(db)
 
+    # ── Phase 1.5: Integrity index provisioning ──────────────────────
+    # nonce_registry: unique dedup index + TTL auto-purge
+    await db.nonce_registry.create_index("nonce", unique=True, background=True)
+    await db.nonce_registry.create_index(
+        "expires_at", expireAfterSeconds=0, background=True
+    )
+    # forensic_chain: compound index for O(log n) chain lookups
+    await db.forensic_chain.create_index(
+        [("installation_id", 1), ("seq", 1)], unique=True, background=True
+    )
+    # scan_logs: index on installation_id + seq for chain-of-custody queries
+    await db.scan_logs.create_index(
+        [("installation_id", 1), ("seq", 1)], background=True
+    )
+    logger.info("Phase 1.5 integrity indexes provisioned")
+    # ─────────────────────────────────────────────────────────────────
+
     logger.info("ShadowTrace Backend ready")
     yield
     logger.info("ShadowTrace Backend shutting down...")
@@ -318,11 +335,20 @@ app.include_router(analyze.router)
 app.include_router(report.router)
 app.include_router(stats.router)
 
-# Phase 3 routers
-from app.routers import auth, analytics, feedback
+# Phase 4, 5 & 6 + Persistence routers
+from app.routers import auth, analytics, feedback, organizations, intelligence, policies, connectors, remediation, simulation, marketplace, persistence, integrity
 app.include_router(auth.router)
 app.include_router(analytics.router)
 app.include_router(feedback.router)
+app.include_router(organizations.router)
+app.include_router(intelligence.router)
+app.include_router(policies.router)
+app.include_router(connectors.router)
+app.include_router(remediation.router)
+app.include_router(simulation.router)
+app.include_router(marketplace.router)
+app.include_router(persistence.router)
+app.include_router(integrity.router)
 
 
 @app.get("/health", tags=["System"])

@@ -37,6 +37,7 @@ class OAuthMiddleware(BaseHTTPMiddleware):
             # Fallback for old extension versions using X-API-Key for now
             api_key = request.headers.get("X-API-Key")
             if api_key == settings.API_KEY:
+                request.state.org_id = "community"
                 return await call_next(request)
             
             return JSONResponse(
@@ -48,15 +49,45 @@ class OAuthMiddleware(BaseHTTPMiddleware):
 
         try:
             # Verify the ID token using Google's public keys
-            # Note: We need the GOOGLE_CLIENT_ID in settings
             idinfo = id_token.verify_oauth2_token(
                 token, 
                 requests.Request(), 
                 audience=settings.GOOGLE_CLIENT_ID
             )
 
-            # Store user info in request state if needed
-            request.state.user_email = idinfo.get('email')
+            email = idinfo.get('email')
+            request.state.user_email = email
+            
+            # Multi-tenant resolution
+            from app.database import get_db
+            from bson import ObjectId
+            db = get_db()
+            
+            # 1. Get the admin user record
+            user = await db.admin_users.find_one({"email": email})
+            if not user:
+                request.state.org_id = "community"
+                return await call_next(request)
+                
+            request.state.user_id = str(user["_id"])
+            
+            # 2. Check for X-Org-ID preference
+            requested_org_id = request.headers.get("X-Org-ID")
+            
+            if requested_org_id and requested_org_id != "community":
+                # Verify membership
+                membership = await db.memberships.find_one({
+                    "user_id": str(user["_id"]),
+                    "org_id": requested_org_id
+                })
+                if membership:
+                    request.state.org_id = requested_org_id
+                    return await call_next(request)
+                else:
+                    # Fallback to default or community if not a member
+                    request.state.org_id = user.get("org_id", "community")
+            else:
+                request.state.org_id = user.get("org_id", "community")
             
         except ValueError as e:
             logger.warning(f"Invalid Google ID Token: {e}")

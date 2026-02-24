@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.dependencies import get_database, require_analyst
+from app.dependencies import get_database, require_analyst, get_current_org_id
 from app.models.schemas import CorrectionRequest
 
 logger = logging.getLogger("shadowtrace.routers.feedback")
@@ -12,16 +12,18 @@ router = APIRouter(prefix="/feedback", tags=["Continuous Learning"])
 async def submit_correction(
     request: CorrectionRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    org_id: str = Depends(get_current_org_id),
     _user: dict = Depends(require_analyst)
 ):
     """
     Records an analyst's manual label for a domain to retrain the model.
     This feedback loop prevents model drift and reduces false positives.
     """
-    logger.info(f"Analyst correction received for {request.domain}: {request.actual_risk}")
+    logger.info(f"Analyst correction received for {request.domain} in Org {org_id}: {request.actual_risk}")
     
     # 1. Store in feedback collection for retraining
     feedback_entry = {
+        "org_id": org_id,
         "domain": request.domain,
         "actual_risk": request.actual_risk,
         "analyst_notes": request.analyst_notes,
@@ -32,10 +34,10 @@ async def submit_correction(
     
     await db.model_feedback.insert_one(feedback_entry)
     
-    # 2. Proactively update whitelist/blacklist if needed
+    # 2. Proactively update whitelist if needed (scoped to Org)
     if request.actual_risk == "Safe":
         await db.trusted_domains.update_one(
-            {"domain": request.domain},
+            {"org_id": org_id, "domain": request.domain},
             {"$set": {"manual_override": True, "source": "analyst_feedback"}},
             upsert=True
         )
@@ -45,9 +47,14 @@ async def submit_correction(
 @router.get("/pending", summary="Get un-processed feedback items")
 async def get_pending_feedback(
     db: AsyncIOMotorDatabase = Depends(get_database),
+    org_id: str = Depends(get_current_org_id),
     _user: dict = Depends(require_analyst)
 ):
-    cursor = db.model_feedback.find({"processed": False}).sort("timestamp", -1)
+    cursor = db.model_feedback.find({
+        "org_id": org_id,
+        "processed": False
+    }).sort("timestamp", -1)
+    
     results = []
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])
