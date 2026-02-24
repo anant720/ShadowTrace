@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.dependencies import get_database, verify_api_key, get_current_org_id, get_current_user_email, build_org_query
+from app.dependencies import get_database, get_current_org_id
 from app.models.schemas import StatsResponse
 
 logger = logging.getLogger("shadowtrace.routers.stats")
@@ -19,13 +19,12 @@ router = APIRouter(tags=["Admin"])
 async def get_stats(
     db: AsyncIOMotorDatabase = Depends(get_database),
     org_id: str = Depends(get_current_org_id),
-    user_email: str = Depends(get_current_user_email),
 ) -> StatsResponse:
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     seven_days_ago = now - timedelta(days=7)
     one_day_ago = now - timedelta(hours=24)
-    base = build_org_query(org_id, user_email)
+    base = {"org_id": org_id}
 
     total_scans = await db.scan_logs.count_documents(base)
     scans_today = await db.scan_logs.count_documents({**base, "timestamp": {"$gte": today_start}})

@@ -13,16 +13,6 @@ from datetime import datetime, timezone
 from app.dependencies import get_database, get_current_org_id, require_admin
 from app.models.schemas import FleetPolicy, PolicyUpdate
 
-# Inline tier config (app/config/ directory was removed)
-_TIER_LIMITS = {
-    "community":  {"features": {"fleet_policy_engine": False}},
-    "pro":        {"features": {"fleet_policy_engine": False}},
-    "enterprise": {"features": {"fleet_policy_engine": True}},
-    "guardian":   {"features": {"fleet_policy_engine": True}},
-}
-def get_tier_config(tier: str) -> dict:
-    return _TIER_LIMITS.get((tier or "community").lower(), _TIER_LIMITS["community"])
-
 logger = logging.getLogger("shadowtrace.routers.policies")
 router = APIRouter(prefix="/policies", tags=["Fleet Policies"])
 
@@ -56,19 +46,8 @@ async def update_org_policy(
     admin = Depends(require_admin)
 ):
     """
-    Update the security policy (Enterprise/Guardian only).
+    Update the fleet security policy (org admins only).
     """
-    # Verify tier
-    org = await db.organizations.find_one({"_id": ObjectId(org_id)})
-    tier = org.get("subscription_tier", "community") if org else "community"
-    tier_config = get_tier_config(tier)
-    
-    if not tier_config["features"].get("fleet_policy_engine"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Fleet Policy Engine is an Enterprise+ (Guardian) feature."
-        )
-
     update_data = {k: v for k, v in update.dict().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc)
 

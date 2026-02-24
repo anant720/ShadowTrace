@@ -13,16 +13,6 @@ from app.ml.security_auditor import SecurityAuditor
 from app.utils.scrubber import CredentialScrubber
 from app.routers.integrity import run_integrity_pipeline
 
-# ── Tier config (inlined to avoid app/config.py vs app/config/ conflict) ──
-_TIER_LIMITS = {
-    "community":  {"features": {"ml_explainability": False, "forensic_reasoning": False}},
-    "pro":        {"features": {"ml_explainability": False, "forensic_reasoning": True}},
-    "enterprise": {"features": {"ml_explainability": True,  "forensic_reasoning": True}},
-    "guardian":   {"features": {"ml_explainability": True,  "forensic_reasoning": True}},
-}
-def get_tier_config(tier: str) -> dict:
-    return _TIER_LIMITS.get((tier or "community").lower(), _TIER_LIMITS["community"])
-
 
 logger = logging.getLogger("shadowtrace.services.risk_scorer")
 scorer = EnsembleScorer()
@@ -34,7 +24,7 @@ def classify_risk(score: float) -> str:
     return "Dangerous"
 
 
-async def evaluate(envelope_data: dict, db: AsyncIOMotorDatabase, org_id: str = "community") -> AnalyzeResponse:
+async def evaluate(envelope_data: dict, db: AsyncIOMotorDatabase, org_id: str) -> AnalyzeResponse:
     now = datetime.now(timezone.utc)
     try:
         # 0. Parse envelope schema
@@ -148,41 +138,24 @@ async def evaluate(envelope_data: dict, db: AsyncIOMotorDatabase, org_id: str = 
         except Exception as e:
             logger.error(f"Log failed: {e}")
 
-        # 5. Tier-Based Feature Masking
-        org = await db.organizations.find_one({"_id": bson.ObjectId(org_id)}) if org_id != "community" else None
-        tier = org.get("subscription_tier", "community") if org else "community"
-        tier_config = get_tier_config(tier)
-        features_allowed = tier_config.get("features", {})
-
+        # 5. Build full response (all features enabled for org users)
         response_data = {
             "risk_score": final_score,
             "risk_level": risk_level,
-            "confidence": analysis["confidence"]
+            "confidence": analysis["confidence"],
+            "reasons": analysis["reasons"],
+            "security_score": security_score,
+            "security_findings": combined_findings,
+            "engine_scores": analysis["layer_scores"],
+            "explainability": analysis["explainability"],
+            "intelligence_policy": {
+                "blockExfiltration": True,
+                "warningOnly": False,
+                "captureBehavioral": True
+            }
         }
 
-        # Pro & Enterprise: Reasoning and Forensic Findings
-        if features_allowed.get("forensic_reasoning") or tier == "enterprise":
-            response_data["reasons"] = analysis["reasons"]
-            response_data["security_score"] = security_score
-            response_data["security_findings"] = combined_findings
-        else:
-            response_data["reasons"] = [f"Phishing analysis complete. Upgrade to Professional for behavioral reasoning."]
-            response_data["security_score"] = None
-            response_data["security_findings"] = []
-
-        # Enterprise: Full XAI Explainability
-        if features_allowed.get("ml_explainability"):
-            response_data["engine_scores"] = analysis["layer_scores"]
-            response_data["explainability"] = analysis["explainability"]
-
-        # Intelligence Policy for Extension (DLP/Behavioral)
-        response_data["intelligence_policy"] = {
-            "blockExfiltration": features_allowed.get("dlp_exfiltration_blocking", False),
-            "warningOnly": features_allowed.get("dlp_exfiltration_warning", False),
-            "captureBehavioral": features_allowed.get("behavioral_fingerprinting", False)
-        }
-        
-        # 6. Autonomous Remediation (Phase 5)
+        # 6. Autonomous Remediation (high-risk only)
         if final_score > 75:
             # We pass a dict for easier processing in remediation service
             scan_context = {

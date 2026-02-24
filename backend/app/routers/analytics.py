@@ -2,26 +2,25 @@ import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.dependencies import get_database, require_analyst, get_current_org_id, get_current_user_email, build_org_query
+from app.dependencies import get_database, require_analyst, get_current_org_id
 
 logger = logging.getLogger("shadowtrace.routers.analytics")
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 @router.get("/summary")
 async def get_summary(
-    domain: str = Query(None), 
-    db: AsyncIOMotorDatabase = Depends(get_database), 
+    domain: str = Query(None),
+    db: AsyncIOMotorDatabase = Depends(get_database),
     org_id: str = Depends(get_current_org_id),
-    user_email: str = Depends(get_current_user_email),
     _user: dict = Depends(require_analyst)
 ):
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    match_query = build_org_query(org_id, user_email)
+
+    match_query = {"org_id": org_id}
     if domain:
         match_query["domain"] = domain
-    
+
     total_scans = await db.scan_logs.count_documents(match_query)
     scans_today = await db.scan_logs.count_documents({**match_query, "timestamp": {"$gte": today_start}})
 
@@ -35,19 +34,20 @@ async def get_summary(
 
     yesterday_start = today_start - timedelta(days=1)
     scans_yesterday = await db.scan_logs.count_documents({**match_query, "timestamp": {"$gte": yesterday_start, "$lt": today_start}})
-    
+
     growth = 0
     if scans_yesterday > 0: growth = round(((scans_today - scans_yesterday) / scans_yesterday) * 100, 1)
 
+    base = {"org_id": org_id}
     return {
         "total_scans": total_scans,
         "scans_today": scans_today,
         "growth_rate": growth,
         "risk_distribution": risk_dist,
-        "total_reports": await db.reports.count_documents(build_org_query(org_id, user_email)),
-        "reports_today": await db.reports.count_documents({**build_org_query(org_id, user_email), "timestamp": {"$gte": today_start}}),
-        "active_anomalies": await db.anomalies.count_documents({**build_org_query(org_id, user_email), "acknowledged": False}),
-        "unique_domains": len(await db.scan_logs.distinct("domain", build_org_query(org_id, user_email))),
+        "total_reports": await db.reports.count_documents(base),
+        "reports_today": await db.reports.count_documents({**base, "timestamp": {"$gte": today_start}}),
+        "active_anomalies": await db.anomalies.count_documents({**base, "acknowledged": False}),
+        "unique_domains": len(await db.scan_logs.distinct("domain", base)),
     }
 
 @router.get("/trends")

@@ -23,7 +23,7 @@ export default function SettingsPage() {
     };
 
     useEffect(() => {
-        if (user?.org_id !== 'community') {
+        if (user?.org_id) {
             fetchMembers();
         }
     }, [user?.org_id]);
@@ -33,27 +33,17 @@ export default function SettingsPage() {
         setLoading(true);
         setMessage('');
         setError('');
-
         try {
             await apiRequest('/organizations/invite', 'POST', { email, role });
             setMessage(`Invitation successfully sent to ${email}`);
             setEmail('');
-            fetchMembers(); // In a real app, this might show pending invites
+            fetchMembers();
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
-
-    if (user?.org_id === 'community') {
-        return (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '16px' }}>Organization Required</h2>
-                <p style={{ color: 'var(--text-muted)' }}>Organization management is only available for Pro and Enterprise plans.</p>
-            </div>
-        );
-    }
 
     return (
         <div style={{ padding: '0 20px' }}>

@@ -1,11 +1,11 @@
 """
-ShadowTrace — Auth Middleware (Fixed)
+ShadowTrace — Auth Middleware (Org-Only)
 
 Auth priority:
   1. Bearer JWT (dashboard users)    → org_id from JWT payload
   2. Bearer Google OAuth (SSO)       → org_id from DB lookup
-  3. X-API-Key (extension)           → org_id = "community"
-  4. No auth on exempt paths
+  3. X-Member-Key (extension)        → org_id + user_email from member_keys DB
+  4. No auth → 401
 """
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -42,7 +42,13 @@ class OAuthMiddleware(BaseHTTPMiddleware):
             # 1a. Try ShadowTrace JWT first (dashboard login)
             payload = verify_token(token)
             if payload:
-                request.state.org_id  = payload.get("org_id", "community")
+                org_id = payload.get("org_id")
+                if not org_id:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Account is not assigned to an organization."},
+                    )
+                request.state.org_id  = org_id
                 request.state.user_id = payload.get("sub", "")
                 request.state.role    = payload.get("role", "member")
                 return await call_next(request)
@@ -60,24 +66,23 @@ class OAuthMiddleware(BaseHTTPMiddleware):
                 request.state.user_email = email
 
                 from app.database import get_db
-                from bson import ObjectId
                 db = get_db()
                 user = await db.admin_users.find_one({"email": email})
-                if not user:
-                    request.state.org_id = "community"
-                    return await call_next(request)
+                if not user or not user.get("org_id"):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Google account is not assigned to an organization."},
+                    )
 
                 request.state.user_id = str(user["_id"])
-
-                # Honour X-Org-ID header if member
                 requested_org = request.headers.get("X-Org-ID")
-                if requested_org and requested_org != "community":
+                if requested_org:
                     membership = await db.memberships.find_one(
                         {"user_id": str(user["_id"]), "org_id": requested_org}
                     )
-                    request.state.org_id = requested_org if membership else user.get("org_id", "community")
+                    request.state.org_id = requested_org if membership else user["org_id"]
                 else:
-                    request.state.org_id = user.get("org_id", "community")
+                    request.state.org_id = user["org_id"]
 
                 return await call_next(request)
 
@@ -106,14 +111,8 @@ class OAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid or revoked member key"},
             )
 
-        # ── Branch 3: X-API-Key (extension without org key) ──────────
-        api_key = request.headers.get("X-API-Key")
-        if api_key == settings.API_KEY:
-            request.state.org_id = "community"
-            return await call_next(request)
-
-        # ── Branch 3: No auth ─────────────────────────────────────────
+        # ── No valid auth ─────────────────────────────────────────────
         return JSONResponse(
             status_code=401,
-            content={"detail": "Missing Authorization header"},
+            content={"detail": "Authentication required. Use a JWT, Google SSO, or an org member key."},
         )

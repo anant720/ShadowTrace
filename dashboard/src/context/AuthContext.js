@@ -16,8 +16,8 @@ export const AuthProvider = ({ children }) => {
         const username = localStorage.getItem('st_user');
         const org_id = localStorage.getItem('st_org');
 
-        if (token && role && username) {
-            setUser({ token, role, username, org_id: org_id || 'community' });
+        if (token && role && username && org_id) {
+            setUser({ token, role, username, org_id });
         }
         setLoading(false);
     }, []);
@@ -26,8 +26,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('st_token', token);
         localStorage.setItem('st_role', role);
         localStorage.setItem('st_user', username);
-        localStorage.setItem('st_org', org_id || 'community');
-        setUser({ token, role, username, org_id: org_id || 'community' });
+        localStorage.setItem('st_org', org_id);
+        setUser({ token, role, username, org_id });
         router.push('/');
     };
 

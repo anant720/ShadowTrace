@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }) {
     }, [user]);
 
     // Filtered Org context UI
-    const currentOrg = organizations.find(o => o.id === user?.org_id) || { name: 'Community', id: 'community' };
+    const currentOrg = organizations.find(o => o.id === user?.org_id) || { name: user?.org_id || 'Organization', id: user?.org_id };
 
     if (loading || (!user && pathname !== '/login')) {
         return <div style={{ background: 'var(--bg-main)', height: '100vh' }} />;
@@ -277,7 +277,7 @@ export default function DashboardLayout({ children }) {
                         <TabButton href="/analytics" label="Security" />
                         <TabButton href="/audit" label="Forensics" />
                         <TabButton href="/intelligence" label="ShadowFeed" />
-                        <TabButton href="/upgrade" label="💎 Upgrade" />
+                        <TabButton href="/settings" label="Settings" />
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
