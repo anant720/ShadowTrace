@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
 
-from app.dependencies import get_database, get_current_org_id, get_current_user
+from app.dependencies import get_database, get_current_org_id, get_current_admin
 from app.models.schemas import HeartbeatRequest
 
 logger = logging.getLogger("shadowtrace.routers.persistence")

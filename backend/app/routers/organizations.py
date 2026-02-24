@@ -1,11 +1,15 @@
 import logging
+from typing import List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
 from app.dependencies import get_database, require_admin, get_current_org_id, get_current_admin
-from app.models.schemas import OrganizationCreate, OrganizationResponse
+from app.models.schemas import (
+    OrganizationCreate, OrganizationResponse,
+    InvitationCreate, InvitationResponse, Member
+)
 
 logger = logging.getLogger("shadowtrace.routers.organizations")
 router = APIRouter(prefix="/organizations", tags=["Organization Management"])

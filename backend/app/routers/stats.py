@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.dependencies import get_database, verify_api_key
+from app.dependencies import get_database, verify_api_key, get_current_org_id
 from app.models.schemas import StatsResponse
 
 logger = logging.getLogger("shadowtrace.routers.stats")

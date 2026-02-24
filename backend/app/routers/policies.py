@@ -12,7 +12,16 @@ from datetime import datetime, timezone
 
 from app.dependencies import get_database, get_current_org_id, require_admin
 from app.models.schemas import FleetPolicy, PolicyUpdate
-from app.config.tier_config import get_tier_config
+
+# Inline tier config (app/config/ directory was removed)
+_TIER_LIMITS = {
+    "community":  {"features": {"fleet_policy_engine": False}},
+    "pro":        {"features": {"fleet_policy_engine": False}},
+    "enterprise": {"features": {"fleet_policy_engine": True}},
+    "guardian":   {"features": {"fleet_policy_engine": True}},
+}
+def get_tier_config(tier: str) -> dict:
+    return _TIER_LIMITS.get((tier or "community").lower(), _TIER_LIMITS["community"])
 
 logger = logging.getLogger("shadowtrace.routers.policies")
 router = APIRouter(prefix="/policies", tags=["Fleet Policies"])

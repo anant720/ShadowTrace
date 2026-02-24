@@ -284,3 +284,40 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     database: str
+
+
+# ── Organization & membership schemas ──────────────────────────────────────
+class OrganizationCreate(BaseModel):
+    name: str
+    slug: str
+    subscription_tier: str = "community"
+
+
+class OrganizationResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    subscription_tier: str
+    created_at: Optional[datetime] = None
+
+
+class InvitationCreate(BaseModel):
+    email: str
+    role: str = "member"
+
+
+class InvitationResponse(BaseModel):
+    id: str
+    email: str
+    role: str
+    org_id: str
+    token: str
+    created_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+
+
+class Member(BaseModel):
+    user_id: str
+    email: str
+    role: str
+    joined_at: Optional[datetime] = None
