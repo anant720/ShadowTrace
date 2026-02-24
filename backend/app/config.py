@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str = "shadowtrace"
     API_KEY: str = "st_api_kG9vX2mN8pL4wR5tZ1yQ7jS4nB0hF3d_"
     CORS_ORIGINS: str = '["http://localhost:3000"]'
+    # Allow chrome extension origins (CORS doesn't support wildcard entries in allow_origins list)
+    CORS_ORIGIN_REGEX: str = r"chrome-extension://.*"
     JWT_SECRET: str = "shadowtrace-jwt-secret-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
@@ -38,7 +40,11 @@ class Settings(BaseSettings):
         try:
             # Expect CORS_ORIGINS as a JSON array string, e.g.
             # '["https://shadow-trace-eight.vercel.app", "http://localhost:3000"]'
-            return json.loads(self.CORS_ORIGINS)
+            raw = self.CORS_ORIGINS.strip()
+            # Render users sometimes paste values with extra quotes, e.g. '["https://..."]'
+            if (raw.startswith("'") and raw.endswith("'")) or (raw.startswith('"') and raw.endswith('"')):
+                raw = raw[1:-1].strip()
+            return json.loads(raw)
         except Exception:
             # Safe fallback during misconfiguration
             return ["*"]
