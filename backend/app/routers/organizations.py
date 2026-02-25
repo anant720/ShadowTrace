@@ -130,55 +130,15 @@ async def invite_member(
         {"$set": {"member_key": member_key}},
     )
 
-    # Fetch org name for email body
+    # Fetch org name for response
     org_doc = await db.organizations.find_one({"_id": ObjectId(org_id)})
     org_name = (org_doc or {}).get("name", "ShadowTrace Organization")
 
-    dashboard_url = getattr(settings, "DASHBOARD_BASE_URL", "http://localhost:3000")
-    invite_link = f"{dashboard_url}/login"
-
-    subject = f"You’ve been invited to {org_name} on ShadowTrace"
-    text = (
-        f"You have been invited to ShadowTrace.\n\n"
-        f"Organization: {org_name}\n"
-        f"Role: {request.role}\n\n"
-        f"Dashboard login: {invite_link}\n\n"
-        f"Extension Member Key (paste into ShadowTrace extension → Settings → Organization Key):\n"
-        f"{member_key}\n\n"
-        f"Invite token (internal reference): {token}\n"
-        f"This invite expires at: {invitation['expires_at'].isoformat()}\n"
+    # Mark invitation as manually-managed (no email sent)
+    await db.invitations.update_one(
+        {"org_id": org_id, "email": invite_email},
+        {"$set": {"email_status": "MANUAL", "sent_at": datetime.now(timezone.utc)}},
     )
-    html = (
-        f"<p>You have been invited to <b>ShadowTrace</b>.</p>"
-        f"<p><b>Organization:</b> {org_name}<br/>"
-        f"<b>Role:</b> {request.role}</p>"
-        f"<p><b>Dashboard login:</b> <a href=\"{invite_link}\">{invite_link}</a></p>"
-        f"<p><b>Extension Member Key</b> (paste into ShadowTrace extension → Settings → Organization Key):</p>"
-        f"<pre style=\"padding:12px;background:#f5f5f5;border-radius:8px;\">{member_key}</pre>"
-        f"<p style=\"color:#666;font-size:12px;\">Invite token (internal reference): {token}<br/>"
-        f"Expires: {invitation['expires_at'].isoformat()}</p>"
-    )
-
-    try:
-        send_email(
-            to_email=invite_email,
-            subject=subject,
-            text=text,
-            html=html,
-        )
-        await db.invitations.update_one(
-            {"org_id": org_id, "email": invite_email},
-            {"$set": {"email_status": "SENT", "sent_at": datetime.now(timezone.utc)}},
-        )
-    except MailerError as e:
-        await db.invitations.update_one(
-            {"org_id": org_id, "email": invite_email},
-            {"$set": {"email_status": "FAILED", "email_error": str(e)}},
-        )
-        raise HTTPException(
-            status_code=502,
-            detail=f"Invitation created but email delivery failed: {e}",
-        )
 
     await log_admin_action(
         db,
@@ -190,10 +150,16 @@ async def invite_member(
         resource_id=request.email,
         old_value=None,
         new_value={"email": request.email, "role": request.role},
-        metadata={"email_status": "SENT"},
+        metadata={"email_status": "MANUAL"},
     )
 
-    return {"status": "success", "invite_token": token, "member_key": member_key, "email_status": "SENT"}
+    return {
+        "status": "success",
+        "invite_token": token,
+        "member_key": member_key,
+        "email_status": "MANUAL",
+        "note": f"Share this key manually with {invite_email}: {member_key}"
+    }
 
 
 @router.post("/invite/resend", summary="Resend invitation email (admin only)")

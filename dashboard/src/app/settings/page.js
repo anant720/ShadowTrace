@@ -20,6 +20,7 @@ export default function SettingsPage() {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('members');
+    const [generatedKey, setGeneratedKey] = useState('');
 
     const fetchMembers = async () => {
         try {
@@ -47,9 +48,11 @@ export default function SettingsPage() {
         setLoading(true);
         setMessage('');
         setError('');
+        setGeneratedKey('');
         try {
-            await apiRequest('/organizations/invite', 'POST', { email, role });
-            setMessage(`Invitation sent to ${email}`);
+            const resp = await apiRequest('/organizations/invite', 'POST', { email, role });
+            setMessage(`Invitation created for ${email}`);
+            if (resp.member_key) setGeneratedKey(resp.member_key);
             setEmail('');
             fetchMembers();
             fetchInvitations();
@@ -189,8 +192,8 @@ export default function SettingsPage() {
                                             <span style={{
                                                 padding: '5px 14px', borderRadius: '10px', fontSize: '11px', fontWeight: '800',
                                                 textTransform: 'uppercase', letterSpacing: '0.06em',
-                                                background: inv.email_status === 'SENT' ? 'rgba(0,184,148,0.1)' : 'rgba(255,59,48,0.1)',
-                                                color: inv.email_status === 'SENT' ? '#00B894' : '#FF3B30'
+                                                background: ['SENT', 'MANUAL'].includes(inv.email_status) ? 'rgba(0,184,148,0.1)' : 'rgba(255,59,48,0.1)',
+                                                color: ['SENT', 'MANUAL'].includes(inv.email_status) ? '#00B894' : '#FF3B30'
                                             }}>{inv.email_status}</span>
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{inv.role}</span>
                                         </div>
@@ -210,7 +213,7 @@ export default function SettingsPage() {
                         }}>✉️</div>
                         <div>
                             <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: '800' }}>Invite Team Member</h2>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Send an org key to a new analyst</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Generate an org key for a new analyst</p>
                         </div>
                     </div>
 
@@ -243,9 +246,28 @@ export default function SettingsPage() {
                         </Field>
 
                         {message && (
-                            <div style={{ padding: '12px 16px', borderRadius: '14px', background: 'rgba(0,184,148,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span>✅</span>
-                                <p style={{ color: '#00B894', fontSize: '13px', fontWeight: '700' }}>{message}</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ padding: '12px 16px', borderRadius: '14px', background: 'rgba(0,184,148,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>✅</span>
+                                    <p style={{ color: '#00B894', fontSize: '13px', fontWeight: '700' }}>{message}</p>
+                                </div>
+                                {generatedKey && (
+                                    <div style={{ padding: '12px 16px', borderRadius: '14px', background: 'var(--bg-main)', border: '1px dashed rgba(0,184,148,0.4)' }}>
+                                        <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+                                            🔑 Member Key — Share this manually
+                                        </p>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <code style={{ flex: 1, fontSize: '11px', fontFamily: 'monospace', color: '#00B894', wordBreak: 'break-all', lineHeight: 1.5 }}>
+                                                {generatedKey}
+                                            </code>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigator.clipboard.writeText(generatedKey)}
+                                                style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(0,184,148,0.15)', color: '#00B894', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}
+                                            >Copy</button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {error && (
