@@ -101,8 +101,19 @@
     function setupObserver() {
         if (observer) observer.disconnect();
         observer = new MutationObserver(() => triggerScan(1500));
+
         if (document.body) {
             observer.observe(document.body, { childList: true, subtree: true });
+        } else {
+            // Wait for body to be available if running at document_start
+            const bodyCheck = setInterval(() => {
+                if (document.body) {
+                    clearInterval(bodyCheck);
+                    observer.observe(document.body, { childList: true, subtree: true });
+                }
+            }, 100);
+            // Safety timeout after 5s
+            setTimeout(() => clearInterval(bodyCheck), 5000);
         }
     }
 
@@ -122,9 +133,14 @@
     });
 
     // ── Boot sequence ─────────────────────────────────────────────────
-    inject();           // Inject page-context script immediately
-    triggerScan(800);   // Auto-scan after 800ms (wait for DOM to settle)
-    setupObserver();    // Watch for DOM changes (SPAs, navigation)
+    inject();           // Inject page-context script immediately (critical at document_start)
+    setupObserver();    // Start watching early
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => triggerScan(600));
+    } else {
+        triggerScan(800);
+    }
 
     console.log('[ShadowTrace] Real-time protection active.');
 })();
