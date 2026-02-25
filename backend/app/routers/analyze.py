@@ -23,7 +23,9 @@ async def analyze_url(
     org_id: str = Depends(get_current_org_id),
 ) -> AnalyzeResponse:
     # Pass raw dict to evaluate for envelope parsing
-    domain_hostname = request_data.get("domain", {}).get("hostname")
+    # Correctly extract hostname from the signed envelope payload for logging
+    payload = request_data.get("payload", {})
+    domain_hostname = payload.get("domain", {}).get("hostname")
     logger.info(f"Analyzing domain: {domain_hostname} for Org: {org_id}")
     result = await risk_scorer.evaluate(request_data, db, org_id)
     return result
