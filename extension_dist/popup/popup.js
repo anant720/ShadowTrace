@@ -326,10 +326,20 @@
         if (activateBtn) {
             activateBtn.addEventListener('click', () => {
                 const key = $('orgKeyInput')?.value?.trim();
-                if (!key) return;
+                const email = $('orgEmailInput')?.value?.trim();
+                if (!key) {
+                    $('keyStatus').textContent = '✗ Please paste your org key';
+                    $('keyStatus').style.color = '#ef4444';
+                    return;
+                }
+                if (!email) {
+                    $('keyStatus').textContent = '✗ Please enter your invited email';
+                    $('keyStatus').style.color = '#ef4444';
+                    return;
+                }
                 $('keyStatus').textContent = 'Validating...';
                 $('keyStatus').style.color = '#94a3b8';
-                chrome.runtime.sendMessage({ type: 'ST_ACTIVATE_KEY', key }, (resp) => {
+                chrome.runtime.sendMessage({ type: 'ST_ACTIVATE_KEY', key, email }, (resp) => {
                     if (resp?.success) {
                         $('keyStatus').textContent = '';
                         showOrgActive({ org_name: resp.org_name, email: resp.email });

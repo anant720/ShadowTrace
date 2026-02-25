@@ -153,11 +153,13 @@
         <div
           style="font-size:11px;color:#94a3b8;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">
           Organization Key</div>
+        <input id="orgKeyInput" type="text" placeholder="Paste your org key (st_mk_...)"
+          style="width:100%;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2e8f0;outline:none;font-family:monospace;margin-bottom:6px;box-sizing:border-box;">
         <div style="display:flex;gap:6px;">
-          <input id="orgKeyInput" type="text" placeholder="Paste your org key (st_mk_...)"
-            style="flex:1;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2e8f0;outline:none;font-family:monospace;">
+          <input id="orgEmailInput" type="email" placeholder="Your invited email"
+            style="flex:1;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 10px;color:#e2e8f0;outline:none;">
           <button id="activateKeyBtn"
-            style="font-size:11px;background:#3b82f6;color:white;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:700;">✓</button>
+            style="font-size:11px;background:#3b82f6;color:white;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:700;white-space:nowrap;">Activate</button>
         </div>
         <div id="keyStatus" style="font-size:10px;margin-top:4px;color:#64748b;"></div>
       </div>

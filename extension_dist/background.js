@@ -236,9 +236,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.type === CONFIG.MSG_TYPE.ACTIVATE_KEY) {
         // Popup is asking us to validate + store an org member key
         const key = message.key;
-        getUserEmail().then((email) => {
+
+        // If the popup explicitly provided an email (new flow), use it directly.
+        // This bypasses the unreliable chrome.identity.getProfileUserInfo entirely.
+        const emailPromise = message.email
+            ? Promise.resolve(message.email.trim().toLowerCase())
+            : getUserEmail();
+
+        emailPromise.then((email) => {
             if (!email || email.includes('anonymous') || email.includes('shadowtrace.local')) {
-                sendResponse({ success: false, error: 'Please sign into Chrome with the invited Gmail first.' });
+                sendResponse({ success: false, error: 'Could not detect your email. Please type it in the email field.' });
                 return;
             }
             const url = `${CONFIG.ACTIVATE_ENDPOINT}/${key}?email=${encodeURIComponent(email)}`;
