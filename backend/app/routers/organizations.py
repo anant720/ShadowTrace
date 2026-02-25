@@ -228,7 +228,7 @@ async def resend_invite(
 async def list_members(
     db: AsyncIOMotorDatabase = Depends(get_database),
     org_id: str = Depends(get_current_org_id),
-    _user: dict = Depends(require_admin)
+    _user: dict = Depends(get_current_admin)
 ):
     """
     List all members of the current organization.
@@ -267,7 +267,7 @@ async def list_members(
 async def list_invitations(
     db: AsyncIOMotorDatabase = Depends(get_database),
     org_id: str = Depends(get_current_org_id),
-    _user: dict = Depends(require_admin)
+    _user: dict = Depends(get_current_admin)
 ):
     """
     List all pending invitations for the current organization.

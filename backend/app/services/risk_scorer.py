@@ -12,6 +12,7 @@ from app.ml.normalization import Normalizer
 from app.ml.security_auditor import SecurityAuditor
 from app.utils.scrubber import CredentialScrubber
 from app.routers.integrity import run_integrity_pipeline
+from app.services.ai_remediation import analyze_and_remediate
 
 
 logger = logging.getLogger("shadowtrace.services.risk_scorer")

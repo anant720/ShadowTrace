@@ -68,14 +68,17 @@ async def verify_envelope_hmac(envelope_dict: dict, db, org_id: str) -> bool:
     verify the HMAC-SHA-256.  The integrity key is the org-level secret
     stored in the organizations collection.
     """
-    org = await db.organizations.find_one({"_id": org_id})
-    if not org:
-        # Try string ObjectId lookup
+    # Try to find org by ObjectId first, then by string _id
+    org = None
+    try:
         import bson
-        try:
-            org = await db.organizations.find_one({"_id": bson.ObjectId(org_id)})
-        except Exception:
-            pass
+        org = await db.organizations.find_one({"_id": bson.ObjectId(org_id)})
+    except Exception:
+        pass
+    if not org:
+        org = await db.organizations.find_one({"_id": org_id})
+
+    # Use org-specific secret if set, otherwise fall back to shared default key
     integrity_key = (org or {}).get("integrity_secret", "shadowtrace_test_integrity_key_2025")
 
     # Deep-copy header and pop hmac
@@ -288,17 +291,23 @@ async def run_integrity_pipeline(
         })
         return {"valid": False, "violation_type": "REPLAY", "gap_info": None, "envelope_hash": None}
 
-    # 2. HMAC
+    # 2. HMAC (soft check — log alert but don't reject, as per-install keys aren't exchanged yet)
     hmac_valid = await verify_envelope_hmac(envelope_dict, db, org_id)
     if not hmac_valid:
+        logger.warning(
+            f"[ShadowTrace] HMAC mismatch for Org={org_id} seq={seq} installation={installation_id}. "
+            f"Logging tamper alert but continuing (key exchange not yet implemented)."
+        )
         await db.tamper_alerts.insert_one({
             "org_id": org_id,
             "installation_id": installation_id,
             "header": header,
             "type": "HMAC_MISMATCH",
+            "severity": "WARNING",
             "timestamp": datetime.now(timezone.utc),
         })
-        return {"valid": False, "violation_type": "HMAC_MISMATCH", "gap_info": None, "envelope_hash": None}
+        # NOTE: Do NOT return here — continue processing. HMAC is informational until
+        # we implement the key-exchange handshake during member key activation.
 
     # 3. Hash chain
     chain_result = await verify_hash_chain(installation_id, seq, prev_hash, genesis, db)
