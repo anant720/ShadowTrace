@@ -27,6 +27,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.errors import DuplicateKeyError
 
 from app.dependencies import get_database, get_current_org_id
+from app.config import settings
 
 logger = logging.getLogger("shadowtrace.routers.integrity")
 router = APIRouter(prefix="/integrity", tags=["Integrity"])
