@@ -228,7 +228,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // This bypasses the unreliable chrome.identity.getProfileUserInfo entirely.
         const emailPromise = message.email
             ? Promise.resolve(message.email.trim().toLowerCase())
-            : getUserEmail();
+            : Promise.resolve('anonymous@shadowtrace.local');
 
         emailPromise.then((email) => {
             if (!email || email.includes('anonymous') || email.includes('shadowtrace.local')) {
@@ -280,9 +280,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // ── Signal Handler ────────────────────────────────────────────────────
 async function handleSignalReport(tabId, payload) {
-    await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);
     const sessionData = await chrome.storage.session.get(`reqs_${tabId}`);
     payload.network_requests = sessionData[`reqs_${tabId}`] || [];
+    await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);
     // Read verified email from storage (set during activation) — DO NOT call getUserEmail()
     const orgData = await chrome.storage.local.get(CONFIG.STORAGE_KEYS.ORG_INFO);
     const orgInfo = orgData[CONFIG.STORAGE_KEYS.ORG_INFO];
