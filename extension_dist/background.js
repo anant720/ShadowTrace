@@ -49,6 +49,8 @@ const CONFIG = {
     ]
 };
 
+let scanQueue = Promise.resolve();
+
 // ── Fleet Policy Engine ──────────────────────────────────────────────
 let activePolicy = { blocked_domains: [], dlp_rules: [] };
 
@@ -293,6 +295,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // ── Signal Handler ────────────────────────────────────────────────────
 async function handleSignalReport(tabId, payload) {
+    // Chain to the global queue to prevent race conditions during signing/sending
+    scanQueue = scanQueue.then(() => _handleSignalReportInternal(tabId, payload))
+        .catch(err => console.error('[ShadowTrace] Queue Execution Error:', err));
+    return scanQueue;
+}
+
+async function _handleSignalReportInternal(tabId, payload) {
     const sessionData = await chrome.storage.session.get(`reqs_${tabId}`);
     payload.network_requests = sessionData[`reqs_${tabId}`] || [];
     await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);

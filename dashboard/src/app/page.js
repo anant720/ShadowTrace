@@ -241,10 +241,21 @@ export default function OverviewPage() {
                   <td style={{ padding: '20px 24px', fontWeight: '700' }}>{scan.domain}</td>
                   <td style={{ padding: '20px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '16px', color: getRiskColor(scan.risk_level) }}>{scan.final_risk_score}</span>
-                      <div style={{ fontSize: '10px', background: `${getRiskColor(scan.risk_level)}15`, color: getRiskColor(scan.risk_level), padding: '2px 8px', borderRadius: '6px', fontWeight: '800' }}>
-                        {scan.risk_level.toUpperCase()}
-                      </div>
+                      {scan.final_risk_score === 100 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: '800', fontSize: '13px', color: '#FF3B30', letterSpacing: '0.5px' }}>INTEGRITY ALERT</span>
+                          <div style={{ fontSize: '10px', background: 'rgba(255,59,48,0.1)', color: '#FF3B30', padding: '2px 8px', borderRadius: '6px', fontWeight: '800', width: 'fit-content' }}>
+                            SYNC ERROR
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ fontWeight: '800', fontSize: '16px', color: getRiskColor(scan.risk_level) }}>{scan.final_risk_score}</span>
+                          <div style={{ fontSize: '10px', background: `${getRiskColor(scan.risk_level)}15`, color: getRiskColor(scan.risk_level), padding: '2px 8px', borderRadius: '6px', fontWeight: '800' }}>
+                            {scan.risk_level.toUpperCase()}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </td>
                   <td style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '14px', fontWeight: '600' }}>

@@ -176,8 +176,8 @@ async def evaluate(envelope_data: dict, db: AsyncIOMotorDatabase, org_id: str) -
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)
         return AnalyzeResponse(
-            risk_score=0,
-            risk_level="Safe",
-            reasons=["Internal ML analysis failure"],
+            risk_score=50.0,
+            risk_level="Suspicious",
+            reasons=[f"Internal ML analysis failure (Report to Admin)"],
             confidence=0.0
         )
