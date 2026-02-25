@@ -221,6 +221,7 @@ export default function OverviewPage() {
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
             <thead>
               <tr style={{ textAlign: 'left' }}>
+                <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>USER</th>
                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>SOURCE DOMAIN</th>
                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>AI SCORE</th>
                 <th style={{ padding: '16px 24px', color: 'var(--text-muted)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>TIME</th>
@@ -236,7 +237,8 @@ export default function OverviewPage() {
                 </tr>
               ) : recentScans.map((scan) => (
                 <tr key={scan._id} style={{ background: 'var(--bg-main)', transition: '0.2s' }}>
-                  <td style={{ padding: '20px 24px', fontWeight: '700', borderRadius: '16px 0 0 16px' }}>{scan.domain}</td>
+                  <td style={{ padding: '20px 24px', fontWeight: '700', borderRadius: '16px 0 0 16px', color: 'var(--text-muted)', fontSize: '13px' }}>{scan.user_email || '—'}</td>
+                  <td style={{ padding: '20px 24px', fontWeight: '700' }}>{scan.domain}</td>
                   <td style={{ padding: '20px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontWeight: '800', fontSize: '16px', color: getRiskColor(scan.risk_level) }}>{scan.final_risk_score}</span>

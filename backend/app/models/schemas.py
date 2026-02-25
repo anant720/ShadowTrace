@@ -321,3 +321,4 @@ class Member(BaseModel):
     email: str
     role: str
     joined_at: Optional[datetime] = None
+    is_active: bool = False

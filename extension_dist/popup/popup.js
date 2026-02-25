@@ -22,7 +22,7 @@
         statusText: $('statusText'),
         networkList: $('networkList'),
         openMonitor: $('openMonitor'),
-        scanButton: $('scanButton'),
+        openMonitor: $('openMonitor'),
         protectionToggle: $('protectionToggle'),
         deepResetBtn: $('deepResetBtn'),
     };
@@ -69,61 +69,7 @@
         await updateProtectionState();
     }
 
-    async function handleManualScan() {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab) return;
 
-        setScanning(tab);
-
-        // Attempt to message existing script
-        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, async (response) => {
-            if (chrome.runtime.lastError) {
-                console.log('Content script not found, injecting on-demand...');
-
-                try {
-                    // Inject dependencies first, then content script
-                    await chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        files: ['utils/constants.js', 'utils/signals.js', 'content.js']
-                    });
-
-                    // Wait a moment for script to initialize its listeners
-                    setTimeout(() => {
-                        chrome.tabs.sendMessage(tab.id, { type: 'ST_MANUAL_SCAN' }, (resp) => {
-                            if (chrome.runtime.lastError) {
-                                setError('Failed to initialize scan engine.');
-                            } else {
-                                pollForResult(tab.id);
-                            }
-                        });
-                    }, 200);
-                } catch (err) {
-                    console.error('Injection failed:', err);
-                    setError('Refused to scan this page (Restricted site).');
-                }
-            } else {
-                pollForResult(tab.id);
-            }
-        });
-    }
-
-    function pollForResult(tabId, attempts = 0) {
-        if (attempts > 10) {
-            setError('Analysis timed out. Try refreshing the page.');
-            return;
-        }
-
-        setTimeout(() => {
-            chrome.runtime.sendMessage({ type: 'ST_GET_RISK', tabId: tabId }, (data) => {
-                // We consider data valid if it has a risk_level set (meaning handleSignalReport finished)
-                if (data && data.risk_level) {
-                    renderRiskData(data);
-                } else {
-                    pollForResult(tabId, attempts + 1);
-                }
-            });
-        }, 1000);
-    }
 
     function startNetworkPoller(tabId) {
         const poll = () => {
@@ -250,21 +196,10 @@
             els.hostname.textContent = 'Welcome to ShadowTrace';
         }
 
-        els.levelBadge.textContent = 'READY TO SCAN';
-        els.statusText.textContent = 'Click below to analyze this page';
+        els.levelBadge.textContent = 'REAL-TIME ACTIVE';
+        els.statusText.textContent = 'Background AI scanning is active';
     }
 
-    // ── Scanning State ──────────────────────────────────────────────
-    function setScanning(tab) {
-        const container = document.querySelector('.st-container');
-        container.setAttribute('data-state', 'scanning');
-
-        els.scoreNumber.textContent = '—';
-        els.scoreLabel.textContent = 'ANALYZING';
-        els.levelBadge.textContent = 'NEURAL SCAN ACTIVE';
-        els.statusDot.className = 'st-status-dot';
-        els.statusText.textContent = 'Performing forensic analysis...';
-    }
 
     // ── Error State ─────────────────────────────────────────────────
     function setError(message) {
@@ -300,9 +235,6 @@
         });
     }
 
-    if (els.scanButton) {
-        els.scanButton.addEventListener('click', handleManualScan);
-    }
 
     if (els.protectionToggle) {
         els.protectionToggle.addEventListener('change', handleProtectionToggle);

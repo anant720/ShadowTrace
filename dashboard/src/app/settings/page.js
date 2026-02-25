@@ -150,12 +150,22 @@ export default function SettingsPage() {
                                             transition: 'transform 0.2s'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                                <div style={{
-                                                    width: '44px', height: '44px', borderRadius: '14px',
-                                                    background: `linear-gradient(135deg, ${roleStyle.color}33, ${roleStyle.color}55)`,
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontWeight: '800', fontSize: '16px', color: roleStyle.color
-                                                }}>{initial}</div>
+                                                <div style={{ position: 'relative' }}>
+                                                    <div style={{
+                                                        width: '44px', height: '44px', borderRadius: '14px',
+                                                        background: `linear-gradient(135deg, ${roleStyle.color}33, ${roleStyle.color}55)`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontWeight: '800', fontSize: '16px', color: roleStyle.color
+                                                    }}>{initial}</div>
+                                                    <div style={{
+                                                        position: 'absolute', bottom: '-2px', right: '-2px',
+                                                        width: '12px', height: '12px', borderRadius: '50%',
+                                                        background: member.is_active ? '#00B894' : '#64748b',
+                                                        border: '2px solid var(--bg-main)',
+                                                        boxShadow: member.is_active ? '0 0 10px rgba(0,184,148,0.5)' : 'none',
+                                                        transition: 'background 0.3s'
+                                                    }} title={member.is_active ? 'Active' : 'Offline'} />
+                                                </div>
                                                 <div>
                                                     <p style={{ fontWeight: '700', fontSize: '14px' }}>{member.email}</p>
                                                     <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>

@@ -233,9 +233,16 @@ async def list_members(
     """
     List all members of the current organization.
     """
-    if org_id == "community":
-        return []
-        
+    # Get extension health records to determine active status
+    health_records = {r["user_id"]: r["last_seen"] for r in await db.extension_health.find({"org_id": org_id}).to_list(length=1000)}
+    now = datetime.now(timezone.utc)
+
+    def check_active(email):
+        last_seen = health_records.get(email)
+        if not last_seen: return False
+        if last_seen.tzinfo is None: last_seen = last_seen.replace(tzinfo=timezone.utc)
+        return (now - last_seen).total_seconds() < 900 # 15 mins
+
     # Get primary users
     primary_users = await db.admin_users.find({"org_id": org_id}).to_list(length=500)
     members = []
@@ -245,7 +252,8 @@ async def list_members(
             "user_id": str(u["_id"]),
             "email": email,
             "role": u.get("role", "member"),
-            "joined_at": u.get("created_at", datetime.now(timezone.utc))
+            "joined_at": u.get("created_at", datetime.now(timezone.utc)),
+            "is_active": check_active(email)
         })
         
     # Get secondary members via memberships
@@ -258,7 +266,8 @@ async def list_members(
                 "user_id": str(u["_id"]),
                 "email": email,
                 "role": m.get("role", "member"),
-                "joined_at": m.get("created_at", datetime.now(timezone.utc))
+                "joined_at": m.get("created_at", datetime.now(timezone.utc)),
+                "is_active": check_active(email)
             })
             
     return members
