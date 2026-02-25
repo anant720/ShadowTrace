@@ -117,11 +117,26 @@ async function saveToBuffer(requestId, data) {
 async function getUserEmail() {
     return new Promise((resolve) => {
         try {
+            // Try privileged (enterprise) first; falls back gracefully on consumer Chrome
             chrome.identity.getProfileUserInfo({ privilege: 'enabled' }, (info) => {
-                resolve(info.email || 'anonymous-user@shadowtrace.local');
+                if (info && info.email) {
+                    resolve(info.email);
+                } else {
+                    // Non-privileged fallback — works on all regular consumer Chrome accounts
+                    chrome.identity.getProfileUserInfo((info2) => {
+                        resolve((info2 && info2.email) || 'anonymous-user@shadowtrace.local');
+                    });
+                }
             });
         } catch (e) {
-            resolve('system-identity@shadowtrace.local');
+            // Last resort fallback
+            try {
+                chrome.identity.getProfileUserInfo((info2) => {
+                    resolve((info2 && info2.email) || 'system-identity@shadowtrace.local');
+                });
+            } catch (_) {
+                resolve('system-identity@shadowtrace.local');
+            }
         }
     });
 }
@@ -228,8 +243,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
             const url = `${CONFIG.ACTIVATE_ENDPOINT}/${key}?email=${encodeURIComponent(email)}`;
             fetch(url)
-                .then(r => r.json())
-                .then(async (info) => {
+                .then(async (r) => {
+                    const info = await r.json();
                     if (info.valid) {
                         await chrome.storage.local.set({
                             [CONFIG.STORAGE_KEYS.MEMBER_KEY]: key,
@@ -237,7 +252,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         });
                         sendResponse({ success: true, org_name: info.org_name, email: info.email });
                     } else {
-                        sendResponse({ success: false, error: 'Key not recognized' });
+                        // Forward the real error detail from the backend
+                        const errMsg = info.detail || info.error || 'Key not recognized';
+                        sendResponse({ success: false, error: errMsg });
                     }
                 })
                 .catch(err => sendResponse({ success: false, error: err.message }));
