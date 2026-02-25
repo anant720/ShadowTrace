@@ -56,30 +56,16 @@
     }
 
     async function updateProtectionState() {
-        const hasPermission = await chrome.permissions.contains({
-            origins: ['<all_urls>']
-        });
-        els.protectionToggle.checked = hasPermission;
+        // <all_urls> is now in host_permissions — always active
+        if (els.protectionToggle) {
+            els.protectionToggle.checked = true;
+            els.protectionToggle.disabled = true;
+        }
     }
 
     async function handleProtectionToggle() {
-        const enabled = els.protectionToggle.checked;
-        if (enabled) {
-            const granted = await chrome.permissions.request({
-                origins: ['<all_urls>']
-            });
-            if (!granted) {
-                els.protectionToggle.checked = false;
-            }
-        } else {
-            const removed = await chrome.permissions.remove({
-                origins: ['<all_urls>']
-            });
-            if (!removed) {
-                // If removal fails (rare), sync UI back
-                await updateProtectionState();
-            }
-        }
+        // No-op: protection is always active since <all_urls> is a fixed host permission
+        await updateProtectionState();
     }
 
     async function handleManualScan() {

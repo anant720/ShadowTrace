@@ -310,7 +310,10 @@ async function handleSignalReport(tabId, payload) {
     await chrome.storage.session.remove([`tab_${tabId}`, `reqs_${tabId}`]);
     const sessionData = await chrome.storage.session.get(`reqs_${tabId}`);
     payload.network_requests = sessionData[`reqs_${tabId}`] || [];
-    const email = await getUserEmail();
+    // Read verified email from storage (set during activation) — DO NOT call getUserEmail()
+    const orgData = await chrome.storage.local.get(CONFIG.STORAGE_KEYS.ORG_INFO);
+    const orgInfo = orgData[CONFIG.STORAGE_KEYS.ORG_INFO];
+    const email = orgInfo?.email || '';
     if (!payload.meta) payload.meta = {};
     payload.meta.user_email = email;
     payload.meta.extensionVersion = chrome.runtime.getManifest().version;
