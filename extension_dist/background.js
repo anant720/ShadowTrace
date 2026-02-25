@@ -54,10 +54,16 @@ let activePolicy = { blocked_domains: [], dlp_rules: [] };
 
 async function syncPolicies() {
     try {
-        const token = await getAuthToken(false);
-        const headers = token
-            ? { 'Authorization': `Bearer ${token}` }
-            : { 'X-API-Key': CONFIG.API_KEY };
+        const stored = await chrome.storage.local.get([CONFIG.STORAGE_KEYS.MEMBER_KEY, CONFIG.STORAGE_KEYS.ORG_INFO]);
+        const memberKey = stored[CONFIG.STORAGE_KEYS.MEMBER_KEY];
+        const orgInfo = stored[CONFIG.STORAGE_KEYS.ORG_INFO];
+        let headers;
+        if (memberKey && orgInfo?.email) {
+            headers = { 'X-Member-Key': memberKey, 'X-User-Email': orgInfo.email };
+        } else {
+            const token = await getAuthToken(false);
+            headers = token ? { 'Authorization': `Bearer ${token}` } : { 'X-API-Key': CONFIG.API_KEY };
+        }
         const res = await fetch(CONFIG.POLICY_SYNC_ENDPOINT, { headers });
         if (res.ok) {
             activePolicy = await res.json();
@@ -74,18 +80,26 @@ setInterval(syncPolicies, CONFIG.POLICY_SYNC_INTERVAL_MS);
 // ── Heartbeat ────────────────────────────────────────────────────────
 async function sendHeartbeat() {
     try {
-        const token = await getAuthToken(false);
+        const stored = await chrome.storage.local.get([CONFIG.STORAGE_KEYS.MEMBER_KEY, CONFIG.STORAGE_KEYS.ORG_INFO]);
+        const memberKey = stored[CONFIG.STORAGE_KEYS.MEMBER_KEY];
+        const orgInfo = stored[CONFIG.STORAGE_KEYS.ORG_INFO];
         const tabs = await chrome.tabs.query({});
         const manifest = chrome.runtime.getManifest();
         const payload = {
-            user_id: (await chrome.storage.local.get('st_user'))?.st_user?.email || 'unknown',
+            user_id: orgInfo?.email || 'unknown',
             extension_version: manifest.version,
             tab_count: tabs.length,
             timestamp: new Date().toISOString()
         };
         const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        else headers['X-API-Key'] = CONFIG.API_KEY;
+        if (memberKey && orgInfo?.email) {
+            headers['X-Member-Key'] = memberKey;
+            headers['X-User-Email'] = orgInfo.email;
+        } else {
+            const token = await getAuthToken(false);
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            else headers['X-API-Key'] = CONFIG.API_KEY;
+        }
         await fetch(CONFIG.HEARTBEAT_ENDPOINT, { method: 'POST', headers, body: JSON.stringify(payload) });
     } catch (err) {
         console.warn('[ShadowTrace] Heartbeat failed:', err.message);
@@ -590,9 +604,12 @@ async function sendToBackend(data, retry = 0) {
 
         if (memberKey) {
             headers['X-Member-Key'] = memberKey;
-            // Mandatory binding: send the signed-in Chrome email
-            const email = await getUserEmail();
-            headers['X-User-Email'] = email || '';
+            // Read the verified email from activation storage — this is reliable.
+            // DO NOT call getUserEmail() here; chrome.identity is broken on consumer Chrome.
+            const orgData = await chrome.storage.local.get(CONFIG.STORAGE_KEYS.ORG_INFO);
+            const orgInfo = orgData[CONFIG.STORAGE_KEYS.ORG_INFO];
+            const verifiedEmail = orgInfo?.email || '';
+            headers['X-User-Email'] = verifiedEmail;
         } else {
             // Priority 2: Google OAuth (silent — no popup)
             const token = await getAuthToken(false);
