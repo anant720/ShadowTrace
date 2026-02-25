@@ -274,6 +274,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ ...riskData, requests: reqs });
         });
         return true;
+    } else if (message.type === 'ST_CLEAR_FORENSIC_MEMORY') {
+        const keys = [
+            CONFIG.STORAGE_KEYS.LAST_SEQ,
+            CONFIG.STORAGE_KEYS.LAST_HASH,
+            CONFIG.STORAGE_KEYS.DEVICE_ID,
+            CONFIG.STORAGE_KEYS.INTEGRITY_KEY
+        ];
+        chrome.storage.local.remove(keys, () => {
+            _offscreenReady = false; // Force re-init of offscreen
+            sendResponse({ success: true });
+        });
+        return true;
+
     }
     return true;
 });
@@ -304,21 +317,25 @@ async function handleSignalReport(tabId, payload) {
         };
     }
 
-    const storageData = await chrome.storage.session.get('active_fleet_policy');
-    const fleetPolicy = storageData.active_fleet_policy || activePolicy;
-    if (risk.intelligence_policy || fleetPolicy) {
-        chrome.tabs.sendMessage(tabId, {
-            type: 'ST_UPDATE_POLICY',
-            policy: {
-                ...risk.intelligence_policy,
-                fleetBlockedDomains: fleetPolicy.blocked_domains,
-                fleetDLPRules: fleetPolicy.dlp_rules
-            }
-        });
-    }
+    try {
+        const storageData = await chrome.storage.session.get('active_fleet_policy');
+        const fleetPolicy = storageData.active_fleet_policy || activePolicy;
+        if (risk.intelligence_policy || fleetPolicy) {
+            chrome.tabs.sendMessage(tabId, {
+                type: 'ST_UPDATE_POLICY',
+                policy: {
+                    ...risk.intelligence_policy,
+                    fleetBlockedDomains: fleetPolicy.blocked_domains,
+                    fleetDLPRules: fleetPolicy.dlp_rules
+                }
+            });
+        }
 
-    await chrome.storage.session.set({ [`tab_${tabId}`]: { ...risk, ...payload } });
-    updateBadge(tabId, risk.risk_level);
+        await chrome.storage.session.set({ [`tab_${tabId}`]: { ...risk, ...payload } });
+        updateBadge(tabId, risk.risk_level);
+    } catch (err) {
+        console.error('[ShadowTrace] Error updating UI/Storage:', err);
+    }
 }
 
 // ── Google Identity ──────────────────────────────────────────────────
@@ -465,9 +482,14 @@ async function signViaOffscreen(envelopeSansHmac, keyHex) {
     if (_offscreenReady) {
         try {
             return await new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    reject(new Error('Offscreen signer timed out (5s)'));
+                }, 5000);
+
                 chrome.runtime.sendMessage(
                     { type: 'ST_SIGN', envelope: envelopeSansHmac, keyHex },
                     (resp) => {
+                        clearTimeout(timer);
                         if (chrome.runtime.lastError || resp?.error) {
                             reject(new Error(resp?.error || chrome.runtime.lastError?.message));
                         } else {

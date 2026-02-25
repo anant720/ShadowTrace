@@ -24,6 +24,7 @@
         openMonitor: $('openMonitor'),
         scanButton: $('scanButton'),
         protectionToggle: $('protectionToggle'),
+        deepResetBtn: $('deepResetBtn'),
     };
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -305,6 +306,21 @@
 
     if (els.protectionToggle) {
         els.protectionToggle.addEventListener('change', handleProtectionToggle);
+    }
+
+    if (els.deepResetBtn) {
+        els.deepResetBtn.addEventListener('click', () => {
+            const confirmed = confirm('This will reset your security sequence and device ID. Use only if the extension is stuck or rejecting scans. Continue?');
+            if (confirmed) {
+                els.deepResetBtn.textContent = 'Resetting...';
+                chrome.runtime.sendMessage({ type: 'ST_CLEAR_FORENSIC_MEMORY' }, (resp) => {
+                    if (resp?.success) {
+                        alert('Memory cleared. Reloading extension...');
+                        chrome.runtime.reload();
+                    }
+                });
+            }
+        });
     }
 
     // ── Org Key Management ────────────────────────────────────────────
