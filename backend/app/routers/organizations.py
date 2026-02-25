@@ -383,15 +383,17 @@ async def activate_member_key(
     if provided != expected:
         raise HTTPException(status_code=401, detail="Member key is not valid for this email")
 
-    # Must have a non-expired invitation matching (org_id, email, member_key)
+    # Check for an optional invitation record — if one exists, verify it isn't expired.
+    # Keys generated directly via /member-key won't have an invitation doc, and that's fine.
     invite = await db.invitations.find_one(
-        {"org_id": record["org_id"], "email": expected, "member_key": key}
+        {"org_id": record["org_id"], "email": expected}
     )
-    if not invite:
-        raise HTTPException(status_code=401, detail="No valid invitation found for this key/email")
-    exp = invite.get("expires_at")
-    if exp and isinstance(exp, datetime) and exp.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Invitation expired")
+    if invite:
+        exp = invite.get("expires_at")
+        if exp and isinstance(exp, datetime):
+            exp_aware = exp if exp.tzinfo else exp.replace(tzinfo=timezone.utc)
+            if exp_aware < datetime.now(timezone.utc):
+                raise HTTPException(status_code=401, detail="Invitation expired")
 
     # Fetch org name for display
     try:
